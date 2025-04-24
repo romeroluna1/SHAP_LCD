@@ -90,7 +90,7 @@ if __name__ == "__main__":
 
     selected_indices_ext = [int(i.strip()) - 1 for i in new_input.split(",") if i.strip().isdigit()]
     selected_new_pairs = [(new_diffs[i][1], new_diffs[i][2]) for i in selected_indices_ext if 0 <= i < len(new_diffs)]
-#prueba con git
+
     print("\n--- Algoritmo 2: Diferencias SHAP para la instancia externa ---")
     explainer.explain_selected_pairs(
         NEW_INSTANCE,
