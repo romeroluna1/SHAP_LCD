@@ -121,8 +121,8 @@ Distribuido bajo la licencia **MIT**. Consulta el archivo [`LICENSE`](LICENSE) p
 
 | Nombre | Afiliación | Correo |
 |--------|------------|--------|
-| Roxana R. | [TODO] | [TODO] |
-| Colaboradores | ¡Tu nombre aquí! | |
+| Roxana R. | Universidad del Cauca. Grupo de Investigación Tecnología de la Infomación GTI.  | romeroluna@unicauca.edu.co |
+| Colaboradores | Ninguno |
 
 ¿Usas **SHAP_LCD** en tu investigación? ¡Cítanos y abre un _issue_ para contarnos!  
 
@@ -138,4 +138,4 @@ Distribuido bajo la licencia **MIT**. Consulta el archivo [`LICENSE`](LICENSE) p
 
 ## Contacto / Contact
 
-Para dudas o sugerencias abre un **Issue** o escribe a **[correo-de-contacto]**.  
+Para dudas o sugerencias abre un **Issue** o escribe a **[romeroluna@unicauca.edu.co]**.  
