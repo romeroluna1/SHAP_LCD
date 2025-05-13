@@ -7,7 +7,7 @@ _Evaluación de las contribuciones de las características a la diferenciación 
 
 ---
 
-## ✨ Descripción breve (ES)
+## Descripción breve (ES)
 
 **SHAP_LCD** implementa un marco matemático y práctico para:
 1. Calcular la **variabilidad de las probabilidades** entre pares de clases de un modelo de clasificación y  
@@ -15,7 +15,7 @@ _Evaluación de las contribuciones de las características a la diferenciación 
 
 Esto permite conocer **qué atributos impulsan que una instancia cambie de una clase a otra**, proporcionando informes locales interpretables para científicos de datos, sociólogos y responsables de políticas públicas.
 
-## ✨ Short description (EN)
+## Short description (EN)
 
 **SHAP_LCD** provides a mathematical and practical framework to:
 1. Compute the **probability variability** between pairs of classes in a classifier, and  
@@ -25,7 +25,7 @@ It helps you discover **which features drive an instance to switch from one clas
 
 ---
 
-## 📂 Estructura del repositorio / Repository layout
+## Estructura del repositorio / Repository layout
 
 ```
 SHAP_LCD/
@@ -39,7 +39,7 @@ SHAP_LCD/
 
 ---
 
-## ⚙️ Instalación / Installation
+## Instalación / Installation
 
 > **Requisitos**  
 > - Python ≥ 3.9  
@@ -62,7 +62,7 @@ pip install -r requirements.txt  # Añade aquí scikit-learn, shap, pandas, etc.
 
 ---
 
-## 🚀 Uso rápido / Quick start
+##  Quick start
 
 ### 1. Desde un script de ejemplo
 
@@ -97,13 +97,13 @@ explainer.save_reports(output_dir="reports/iris_instance0")    # Exporta resulta
 
 ---
 
-## 📊 Ejemplo de salida
+## Ejemplo de salida
 
 ![Sample ΔP vs ΔSHAP](docs/example_delta_plot.png) <!-- TODO: añade captura si lo deseas -->
 
 ---
 
-## 🤝 Contribuciones / Contributing
+##  Contribuciones / Contributing
 
 1. Haz un fork y crea tu rama (`git checkout -b feature/mi-mejora`).  
 2. Asegúrate de que `pre-commit` (black, flake8, isort) pasa sin errores.  
@@ -111,13 +111,13 @@ explainer.save_reports(output_dir="reports/iris_instance0")    # Exporta resulta
 
 ---
 
-## 📝 Licencia / License
+##  Licencia / License
 Distribuido bajo la licencia **MIT**. Consulta el archivo [`LICENSE`](LICENSE) para más información.  
 <!-- TODO: cámbiala si decides otra licencia -->
 
 ---
 
-## 👥 Autores / Authors
+##  Autores / Authors
 
 | Nombre | Afiliación | Correo |
 |--------|------------|--------|
@@ -128,7 +128,7 @@ Distribuido bajo la licencia **MIT**. Consulta el archivo [`LICENSE`](LICENSE) p
 
 ---
 
-## 📚 Referencias clave / Key references
+## Referencias clave / Key references
 
 - Lundberg, S. M., & Lee, S.-I. (2017). “A Unified Approach to Interpreting Model Predictions.”  
 - [SHAP documentation](https://shap.readthedocs.io/en/latest/) (2025-01-08).  
@@ -136,6 +136,6 @@ Distribuido bajo la licencia **MIT**. Consulta el archivo [`LICENSE`](LICENSE) p
 
 ---
 
-## ✉️ Contacto / Contact
+## Contacto / Contact
 
 Para dudas o sugerencias abre un **Issue** o escribe a **[correo-de-contacto]**.  
