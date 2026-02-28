@@ -24,8 +24,7 @@ from sklearn.preprocessing import MinMaxScaler
 import os
 
 class SHAPExplainer:
-    PATH_BASE_IMAGES = "images"
-    def __init__(self, csv_path, model_class, target_column, n_splits=10, test_size=0.3, random_state=42):
+    def __init__(self, csv_path, model_class, target_column, path_save_images, n_splits=10, test_size=0.3, random_state=42):
         self.csv_path = csv_path
         self.model_class = model_class
         self.name_model = model_class.func.__name__ if isinstance(model_class, partial) else model_class.__name__
@@ -40,12 +39,17 @@ class SHAPExplainer:
         self.shap_values = None
         self.modelo_entrenado_70 = None
         self.explainer = None
+        self.exist_database_path = os.path.exists(self.csv_path)
         self._load_data()
-        self.path_images = f'{self.PATH_BASE_IMAGES}_{self.database_name}_{self.name_model}'
+        self.path_images = path_save_images
         if not os.path.exists(self.path_images):
             os.makedirs(self.path_images)
 
     def _load_data(self):
+        if not self.exist_database_path:
+            print('No existe el archivo, descargalo primero a la raiz del proyecto')
+            return
+
         df = pd.read_csv(self.csv_path)
         self.df = df.copy()
         self.y = df[self.target_column].values
@@ -65,6 +69,9 @@ class SHAPExplainer:
             self.explainer = shap.KernelExplainer(self.modelo_entrenado_70.predict_proba, background)
 
     def train_and_evaluate(self):
+        if not self.exist_database_path:
+            return
+
         cv = StratifiedKFold(n_splits=self.n_splits, shuffle=True, random_state=self.random_state)
         for fold, (train_index, val_index) in enumerate(cv.split(self.X_train, self.y_train), start=1):
             X_fold_train, X_fold_val = self.X_train[train_index], self.X_train[val_index]
@@ -92,12 +99,18 @@ class SHAPExplainer:
         print("\nModelo final entrenado sobre el 70% de los datos.")
 
     def calculate_shap_values(self):
+        if not self.exist_database_path:
+            return
+
         if self.modelo_entrenado_70 is None or self.explainer is None:
             raise ValueError("Debe entrenar el modelo y generar el explainer antes de calcular los valores SHAP.")
         self.shap_values = self.explainer.shap_values(self.X_test)
         print("Valores SHAP calculados con forma:", np.array(self.shap_values).shape)
 
     def save_shap_values(self, filename="shap_values.pickle"):
+        if not self.exist_database_path:
+            return
+
         if self.shap_values is None:
             raise ValueError("Debe calcular los valores SHAP antes de guardarlos.")
         with open(filename, 'wb') as handle:
@@ -105,6 +118,9 @@ class SHAPExplainer:
         print(f"Valores SHAP guardados en {filename}")
 
     def plot_probability_differences(self, instance, instance_type="test", class_names=None, instance_label="Instancia"):
+        if not self.exist_database_path:
+            return
+
         if self.modelo_entrenado_70 is None:
             raise ValueError("Debe entrenar el modelo antes de usar SHAP.")
 
@@ -145,6 +161,9 @@ class SHAPExplainer:
         return diffs
 
     def explain_selected_pairs(self, instance, selected_pairs, instance_type="test", class_names=None, instance_label="Instancia"):
+        if not self.exist_database_path:
+            return
+
         if self.modelo_entrenado_70 is None or self.explainer is None:
             raise ValueError("Debe entrenar el modelo y generar el explainer antes de usar SHAP.")
 

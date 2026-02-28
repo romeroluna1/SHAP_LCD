@@ -7,6 +7,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.linear_model import LogisticRegression
 import pandas as pd
 import numpy as np
+import sys
 
 TARGET_COLUMN = 'target'
 INSTANCE_INDEX = 10
@@ -30,8 +31,11 @@ listNewInstancesForDataset = {
     'wine': [13.0, 1.80, 2.43, 16.0, 102.0, 2.86, 3.03, 0.30, 2.30, 6.50, 1.04, 3.80, 1280.0],
 }
 
-dataset = list(listDatasets)[1]
-algorithm = list(listAlgorithms)[0]
+dataset_index = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() and int(sys.argv[1]) < len(listDatasets) else 1
+algorithm_index = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() and int(sys.argv[2]) < len(listAlgorithms) else 0
+
+dataset = list(listDatasets)[dataset_index]
+algorithm = list(listAlgorithms)[algorithm_index]
 NEW_INSTANCE = listNewInstancesForDataset[dataset]
 
 CSV_PATH = f'{dataset}.csv'
@@ -43,23 +47,31 @@ print('dataset', dataset)
 print('algorithm', algorithm)
 print('new_instance', NEW_INSTANCE)
 
-model_svc = listAlgorithms[algorithm]
 SHAP_FILE = f'shap_values_{dataset}_{algorithm}.pickle'
+PATH_BASE_IMAGES = f'images_{dataset}_{algorithm}'
 
-
-if __name__ == "__main__":
-    explainer = SHAPExplainer(CSV_PATH, model_svc, TARGET_COLUMN)
+def main(model):
+    explainer = SHAPExplainer(CSV_PATH, model, TARGET_COLUMN, PATH_BASE_IMAGES)
     explainer.train_and_evaluate()
     explainer.calculate_shap_values()
     explainer.save_shap_values(SHAP_FILE)
     prob_diffs = explainer.plot_probability_differences(INSTANCE_INDEX, "test", CLASS_NAMES,
                                                         f"Instancia {INSTANCE_INDEX}")
 
+    if not prob_diffs:
+        return
+
     selected_pairs = [(prob_diffs[i][1], prob_diffs[i][2]) for i, value in enumerate(prob_diffs) if 0 <= i < len(prob_diffs)]
     explainer.explain_selected_pairs(INSTANCE_INDEX, selected_pairs, "test", CLASS_NAMES, f"Instancia {INSTANCE_INDEX}")
 
     new_diffs = explainer.plot_probability_differences(NEW_INSTANCE, "new", CLASS_NAMES, "Instancia nueva")
 
+    if not new_diffs:
+        return
+
     selected_new_pairs = [(new_diffs[i][1], new_diffs[i][2]) for i, value in enumerate(new_diffs) if 0 <= i < len(new_diffs)]
     explainer.explain_selected_pairs(NEW_INSTANCE, selected_new_pairs, "new", CLASS_NAMES, "Instancia nueva")
 
+if __name__ == "__main__":
+    model_choose = listAlgorithms[algorithm]
+    main(model_choose)
