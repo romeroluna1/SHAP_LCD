@@ -11,6 +11,8 @@
 #     - KernelExplainer para modelos no lineales o caja negra.
 # Esto permite utilizar una amplia variedad de modelos sin modificar el flujo principal del código, manteniendo así la flexibilidad y modularidad del sistema.
 
+from functools import partial
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import shap
@@ -19,11 +21,15 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.preprocessing import MinMaxScaler
+import os
 
 class SHAPExplainer:
+    PATH_BASE_IMAGES = "images"
     def __init__(self, csv_path, model_class, target_column, n_splits=10, test_size=0.3, random_state=42):
         self.csv_path = csv_path
         self.model_class = model_class
+        self.name_model = model_class.func.__name__ if isinstance(model_class, partial) else model_class.__name__
+        self.database_name = Path(csv_path).stem
         self.target_column = target_column
         self.n_splits = n_splits
         self.test_size = test_size
@@ -35,6 +41,9 @@ class SHAPExplainer:
         self.modelo_entrenado_70 = None
         self.explainer = None
         self._load_data()
+        self.path_images = f'{self.PATH_BASE_IMAGES}_{self.database_name}_{self.name_model}'
+        if not os.path.exists(self.path_images):
+            os.makedirs(self.path_images)
 
     def _load_data(self):
         df = pd.read_csv(self.csv_path)
@@ -70,7 +79,9 @@ class SHAPExplainer:
             self.resultados.append({'Pliegue': f'Pliegue {fold}', 'Accuracy': accuracy})
 
         print("\nResultados de Validación Cruzada:")
-        print(pd.DataFrame(self.resultados))
+        df = pd.DataFrame(self.resultados)
+        df.index = df.index + 1
+        print(df)
 
         try:
             self.modelo_entrenado_70 = self.model_class(random_state=self.random_state)
@@ -129,7 +140,7 @@ class SHAPExplainer:
         plt.xticks(fontsize=16)
         plt.yticks(fontsize=16)
         plt.tight_layout()
-        plt.show()
+        plt.savefig(f"{self.path_images}/Grafica_probability_diff_values_{instance_label}.png", dpi=300, bbox_inches='tight')
 
         return diffs
 
@@ -182,4 +193,4 @@ class SHAPExplainer:
             plt.xticks(fontsize=18)
             plt.yticks(fontsize=18)
             plt.tight_layout()
-            plt.show()
+            plt.savefig(f"{self.path_images}/Grafica_diff_values_shap_between_class_{class_i}__{class_j}-{instance_label}.png", dpi=300, bbox_inches='tight')
