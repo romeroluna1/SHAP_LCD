@@ -1,22 +1,22 @@
 from functools import partial
 from SHAPE_Explainer import SHAPExplainer
-from sklearn.datasets import load_iris, load_wine, fetch_openml
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.linear_model import LogisticRegression
-import pandas as pd
 import numpy as np
 import sys
+import json
+import os
 
 TARGET_COLUMN = 'target'
 INSTANCE_INDEX = 10
 
-listDatasets = {
-    'vehicle': lambda: fetch_openml(data_id=54, as_frame=False, parser='auto'),
-    'iris': lambda: load_iris(),
-    'wine': lambda: load_wine(),
-}
+REGISTRY_PATH = 'datasets_registry.json'
+with open(REGISTRY_PATH, 'r') as f:
+    datasets_registry = json.load(f)
+
+listDatasets = list(datasets_registry.keys())
 
 listAlgorithms = {
     'svc': partial(SVC, probability=True),
@@ -25,23 +25,32 @@ listAlgorithms = {
     'logistic': LogisticRegression,
 }
 
-listNewInstancesForDataset = {
-    'vehicle': [90, 40, 100, 180, 60, 9, 200, 50, 20, 150, 250, 500, 180, 70, 8, 10, 200, 208],
-    'iris': [5.0, 2.0, 5.1, 1.8],
-    'wine': [13.0, 1.80, 2.43, 16.0, 102.0, 2.86, 3.03, 0.30, 2.30, 6.50, 1.04, 3.80, 1280.0],
-}
-
 dataset_index = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() and int(sys.argv[1]) < len(listDatasets) else 1
 algorithm_index = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() and int(sys.argv[2]) < len(listAlgorithms) else 0
 
-dataset = list(listDatasets)[dataset_index]
+dataset = listDatasets[dataset_index]
 algorithm = list(listAlgorithms)[algorithm_index]
-NEW_INSTANCE = listNewInstancesForDataset[dataset]
 
-CSV_PATH = f'{dataset}.csv'
-data = listDatasets[dataset]()
+dataset_config = datasets_registry[dataset]
+CSV_PATH = dataset_config['csv']
+TARGET_COLUMN = dataset_config.get('target_column', 'target')
+NEW_INSTANCE = dataset_config.get('new_instance')
+CLASS_NAMES_PATH = f'CLASS_NAMES_{dataset.upper()}.json'
 
-CLASS_NAMES = {i: name for i, name in enumerate(data.target_names)}
+if not os.path.exists(CSV_PATH) or not os.path.exists(CLASS_NAMES_PATH):
+    raise FileNotFoundError(
+        f"Archivos de dataset no encontrados para '{dataset}'. Ejecuta primero: python download_datasets.py"
+    )
+
+if NEW_INSTANCE is None:
+    raise ValueError(
+        f"'{dataset}' no tiene 'new_instance' definido en {REGISTRY_PATH}."
+    )
+
+with open(CLASS_NAMES_PATH, 'r') as f:
+    CLASS_NAMES = {int(k): v for k, v in json.load(f).items()}
+
+
 print('classnames', CLASS_NAMES)
 print('dataset', dataset)
 print('algorithm', algorithm)
@@ -51,10 +60,9 @@ SHAP_FILE = f'shap_values_{dataset}_{algorithm}.pickle'
 PATH_BASE_IMAGES = f'images_{dataset}_{algorithm}'
 
 def main(model):
-    explainer = SHAPExplainer(CSV_PATH, model, TARGET_COLUMN, PATH_BASE_IMAGES)
-    explainer.train_and_evaluate()
-    explainer.calculate_shap_values()
-    explainer.save_shap_values(SHAP_FILE)
+    sep = dataset_config.get('sep', ',')
+    explainer = SHAPExplainer(CSV_PATH, model, TARGET_COLUMN, PATH_BASE_IMAGES, sep=sep)
+    explainer.load_or_compute(SHAP_FILE)
     prob_diffs = explainer.plot_probability_differences(INSTANCE_INDEX, "test", CLASS_NAMES,
                                                         f"Instancia {INSTANCE_INDEX}")
 
@@ -64,7 +72,7 @@ def main(model):
     selected_pairs = [(prob_diffs[i][1], prob_diffs[i][2]) for i, value in enumerate(prob_diffs) if 0 <= i < len(prob_diffs)]
     explainer.explain_selected_pairs(INSTANCE_INDEX, selected_pairs, "test", CLASS_NAMES, f"Instancia {INSTANCE_INDEX}")
 
-    new_diffs = explainer.plot_probability_differences(NEW_INSTANCE, "new", CLASS_NAMES, "Instancia nueva")
+    new_diffs = explainer.plot_probability_differences(NEW_INSTANCE, "new", CLASS_NAMES, "Instancia nueva") if NEW_INSTANCE is not None else None
 
     if not new_diffs:
         return

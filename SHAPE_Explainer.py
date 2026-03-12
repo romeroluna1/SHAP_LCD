@@ -24,8 +24,9 @@ from sklearn.preprocessing import MinMaxScaler
 import os
 
 class SHAPExplainer:
-    def __init__(self, csv_path, model_class, target_column, path_save_images, n_splits=10, test_size=0.3, random_state=42):
+    def __init__(self, csv_path, model_class, target_column, path_save_images, n_splits=10, test_size=0.3, random_state=42, sep=','):
         self.csv_path = csv_path
+        self.sep = sep
         self.model_class = model_class
         self.name_model = model_class.func.__name__ if isinstance(model_class, partial) else model_class.__name__
         self.database_name = Path(csv_path).stem
@@ -50,10 +51,13 @@ class SHAPExplainer:
             print('No existe el archivo, descargalo primero a la raiz del proyecto')
             return
 
-        df = pd.read_csv(self.csv_path)
+        df = pd.read_csv(self.csv_path, sep=self.sep)
         self.df = df.copy()
         self.y = df[self.target_column].values
-        self.X = df.drop(columns=[self.target_column]).values
+        df_features = df.drop(columns=[self.target_column])
+        for col in df_features.select_dtypes(include='object').columns:
+            df_features[col] = pd.Categorical(df_features[col]).codes
+        self.X = df_features.values
         self.X_norm = self.scaler.fit_transform(self.X)
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
             self.X_norm, self.y, test_size=self.test_size, stratify=self.y, random_state=self.random_state)
@@ -116,6 +120,20 @@ class SHAPExplainer:
         with open(filename, 'wb') as handle:
             pickle.dump(self.shap_values, handle, protocol=pickle.HIGHEST_PROTOCOL)
         print(f"Valores SHAP guardados en {filename}")
+
+    def load_or_compute(self, filename="shap_values.pickle"):
+        """Carga los valores SHAP desde disco si existen; si no, entrena el modelo, los calcula y los guarda."""
+        if os.path.exists(filename):
+            with open(filename, 'rb') as handle:
+                self.shap_values = pickle.load(handle)
+            # El modelo entrenado es necesario para predict_proba; entrenar igualmente pero sin recalcular SHAP
+            self.train_and_evaluate()
+            print(f"Valores SHAP cargados desde {filename}")
+        else:
+            self.train_and_evaluate()
+            self.calculate_shap_values()
+            self.save_shap_values(filename)
+            print(f"Valores SHAP calculados y guardados en {filename}")
 
     def plot_probability_differences(self, instance, instance_type="test", class_names=None, instance_label="Instancia"):
         if not self.exist_database_path:
