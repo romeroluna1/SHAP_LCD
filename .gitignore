@@ -1,4 +1,5 @@
-*.pickle
 *.png
 *.pyc
 *.csv
+*.json
+!datasets_registry.json
