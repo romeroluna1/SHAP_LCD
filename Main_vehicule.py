@@ -1,5 +1,5 @@
 from SHAP_LCD.SHAPE_Explainer import SHAPExplainer
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
 import pandas as pd
 import numpy as np
 
@@ -10,6 +10,9 @@ import matplotlib
 import seaborn as sns
 import platform
 
+# --------------------------------------------
+# INFO DE ENTORNO (igual que Iris/Wine)
+# --------------------------------------------
 print("Python:", sys.version)
 print("NumPy:", np.__version__)
 print("pandas:", pd.__version__)
@@ -17,47 +20,52 @@ print("scikit-learn:", sklearn.__version__)
 print("SHAP:", shap.__version__)
 print("matplotlib:", matplotlib.__version__)
 print("seaborn:", sns.__version__)
-
-# Solo si usas xgboost (Wine):
-try:
-    import xgboost
-    print("xgboost:", xgboost.__version__)
-except Exception:
-    pass
-
 print("OS:", platform.platform())
 print("Processor:", platform.processor())
 
 # --------------------------------------------
-# PARÁMETROS GENERALES DEL PROGRAMA
+# PARÁMETROS GENERALES
 # --------------------------------------------
-
-CSV_PATH = "iris.csv"
-TARGET_COLUMN = "target"
+CSV_PATH = r"C:\Users\romer\OneDrive\Desktop\Roxana Romero\ExplicabilidadRF\Datos_vehicule\statlog_vehicle_clean.csv"
+TARGET_COLUMN = "class_num"
 INSTANCE_INDEX = 10
-SHAP_FILE = "shap_values_iris.pickle"
-NEW_INSTANCE = [5.0, 2.0, 5.1, 1.8]
+SHAP_FILE = "shap_values_vehicle_dt.pickle"
 
 # --------------------------------------------
-# DEFINICIÓN DE LOS NOMBRES DE CLASE
+# NOMBRES DE CLASE (idx -> nombre)
+# --------------------------------------------
+CLASS_NAMES = {
+    0: "bus",
+    1: "saab",
+    2: "opel",
+    3: "van",
+}
+
+# --------------------------------------------
+# NUEVA INSTANCIA EXTERNA (AUTOAJUSTADA A #FEATURES)
 # --------------------------------------------
 df = pd.read_csv(CSV_PATH)
-y = df[TARGET_COLUMN]
-CLASS_NAMES = {i: name for i, name in enumerate(["setosa", "versicolor", "virginica"])}
+feature_cols = [c for c in df.columns if c != TARGET_COLUMN]
+NEW_INSTANCE = [0.0] * len(feature_cols)
 
 # --------------------------------------------
-# BLOQUE PRINCIPAL
+# MAIN
 # --------------------------------------------
 if __name__ == "__main__":
-    explainer = SHAPExplainer(CSV_PATH, RandomForestClassifier, TARGET_COLUMN)
+    # 1) Inicializar explicador
+    #    IMPORTANTE: aquí NO usamos target_as_str=True para que las clases sean int (0,1,2,3)
+    #    y se puedan mapear bien a CLASS_NAMES en las métricas.
+    explainer = SHAPExplainer(
+        CSV_PATH,
+        lambda **kwargs: DecisionTreeClassifier(random_state=42),
+        TARGET_COLUMN,
+        target_as_str=False
+    )
 
-    # 1) Entrenar modelo
+    # 2) Entrenar modelo (CV + modelo final 70%)
     explainer.train_and_evaluate()
 
-    # 2) SHAP: reutilizar si existe; si no existe, calcula y guarda
-    #    mode="auto"  -> carga si existe, si no calcula+guarda
-    #    mode="always"-> recalcula siempre
-    #    mode="never" -> solo carga (si no existe: error)
+    # 3) SHAP: reutilizar si existe; si no existe calcula+guarda
     explainer.ensure_shap_values(SHAP_FILE, mode="auto")
 
     print("\nX_test shape:", explainer.X_test.shape)
@@ -71,7 +79,7 @@ if __name__ == "__main__":
         INSTANCE_INDEX,
         instance_type="test",
         class_names=CLASS_NAMES,
-        instance_label=f"Instance {INSTANCE_INDEX}"
+        instance_label=f"Instancia {INSTANCE_INDEX}"
     )
 
     for i, (diff, c1, c2) in enumerate(prob_diffs):
@@ -88,7 +96,7 @@ if __name__ == "__main__":
         selected_pairs=selected_pairs,
         instance_type="test",
         class_names=CLASS_NAMES,
-        instance_label=f"Instance {INSTANCE_INDEX}"
+        instance_label=f"Instancia {INSTANCE_INDEX}"
     )
 
     # --------------------------------------------
@@ -125,19 +133,19 @@ if __name__ == "__main__":
     explainer.plot_global_violin_by_class(
         class_names=CLASS_NAMES,
         use_normalized=True,
-        dataset_name="Iris",
+        dataset_name="Vehicle",
         mode="pooled_features",
-        save_path="iris_global_violin.png",
+        save_path="vehicle_global_violin.png",
         dpi=600,
-        figsize=(8, 5),
+        figsize=(10, 5),
         violin_alpha=0.75,
         fliersize=8
     )
 
     explainer.plot_class_distribution_bar(
         class_names=CLASS_NAMES,
-        dataset_name="Iris",
-        save_path="iris_class_distribution.png",
+        dataset_name="Vehicle",
+        save_path="vehicle_class_distribution.png",
         dpi=600,
         figsize=(8, 5),
         cmap_min=0.2,
@@ -146,12 +154,12 @@ if __name__ == "__main__":
     )
 
     # --------------------------------------------
-    # MÉTRICAS SHAP-LCD (par fijo)
+    # MÉTRICAS SHAP-LCD (par fijo) — con nombres de clases
     # --------------------------------------------
     print("\n--- Evaluación SHAP_LCD (par fijo) ---")
     df_inst, summary = explainer.evaluate_shap_lcd_pair(
-        pair=(1, 2),
-        class_names=CLASS_NAMES,
+        pair=(0, 1),                 # ✅ enteros
+        class_names=CLASS_NAMES,     # ✅ para que salga "bus vs saab"
         filter_mode="true",
         n_instances=None,
         M=40,
@@ -168,15 +176,15 @@ if __name__ == "__main__":
     print("\nPrimeras filas:")
     print(df_inst.head(10).to_string(index=False))
 
-    df_inst.to_csv("iris_shap_lcd_pair_metrics.csv", index=False)
+    df_inst.to_csv("vehicle_shap_lcd_pair_metrics_0_1.csv", index=False)
 
     # --------------------------------------------
     # COMPARACIÓN DE CONSISTENCIA (dos versiones)
     # --------------------------------------------
     print("\n--- Comparación de consistencia (pred->exp vs exp->pred) ---")
     df_cmp, summary_cmp = explainer.evaluate_shap_lcd_pair_compare_consistency(
-        pair=(1, 2),
-        class_names=CLASS_NAMES,
+        pair=(0, 1),                 # ✅ enteros
+        class_names=CLASS_NAMES,     # ✅ nombres
         filter_mode="true",
         n_instances=None,
         M=40,
@@ -193,7 +201,8 @@ if __name__ == "__main__":
     print("\nPrimeras filas df_cmp:")
     print(df_cmp.head().to_string(index=False))
 
-    df_cmp.to_csv("iris_compare_consistency_0_1.csv", index=False)
+    df_cmp.to_csv("vehicle_compare_consistency_0_1.csv", index=False)
+
 
 print("N instancias evaluadas:", len(df_inst))
 print("M (perturbaciones por instancia):", 40)  # o el M que estés usando

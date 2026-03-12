@@ -1,55 +1,46 @@
 from SHAP_LCD.SHAPE_Explainer import SHAPExplainer
-from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
 import pandas as pd
 import numpy as np
-
-import sys
-import sklearn
-import shap
-import matplotlib
-import seaborn as sns
-import platform
-
-print("Python:", sys.version)
-print("NumPy:", np.__version__)
-print("pandas:", pd.__version__)
-print("scikit-learn:", sklearn.__version__)
-print("SHAP:", shap.__version__)
-print("matplotlib:", matplotlib.__version__)
-print("seaborn:", sns.__version__)
-
-# Solo si usas xgboost (Wine):
-try:
-    import xgboost
-    print("xgboost:", xgboost.__version__)
-except Exception:
-    pass
-
-print("OS:", platform.platform())
-print("Processor:", platform.processor())
 
 # --------------------------------------------
 # PARÁMETROS GENERALES DEL PROGRAMA
 # --------------------------------------------
 
-CSV_PATH = "iris.csv"
-TARGET_COLUMN = "target"
-INSTANCE_INDEX = 10
-SHAP_FILE = "shap_values_iris.pickle"
-NEW_INSTANCE = [5.0, 2.0, 5.1, 1.8]
+CSV_PATH = "wine.csv"                # Ruta al archivo CSV del dataset
+TARGET_COLUMN = "target"             # Nombre de la columna objetivo
+INSTANCE_INDEX = 38                  # Índice de la instancia a analizar del conjunto de prueba
+SHAP_FILE = "shap_values_wine_xgb.pickle"
+
+# Nueva instancia (Wine tiene 13 características)
+NEW_INSTANCE = [13.2, 2.7, 2.4, 17.5, 100.0, 2.8, 2.9, 0.30, 2.0, 5.2, 1.05, 3.3, 1050.0]
 
 # --------------------------------------------
-# DEFINICIÓN DE LOS NOMBRES DE CLASE
+# DEFINICIÓN DE LOS NOMBRES DE CLASE PARA VISUALIZACIÓN (como en el artículo)
 # --------------------------------------------
+
 df = pd.read_csv(CSV_PATH)
 y = df[TARGET_COLUMN]
-CLASS_NAMES = {i: name for i, name in enumerate(["setosa", "versicolor", "virginica"])}
+
+class_mapping = {
+    0: "wine_class_0",
+    1: "wine_class_1",
+    2: "wine_class_2",
+}
+CLASS_NAMES = class_mapping
 
 # --------------------------------------------
-# BLOQUE PRINCIPAL
+# BLOQUE PRINCIPAL DEL PROGRAMA
 # --------------------------------------------
+
 if __name__ == "__main__":
-    explainer = SHAPExplainer(CSV_PATH, RandomForestClassifier, TARGET_COLUMN)
+    # Inicializar el explicador SHAP con el modelo y datos
+    # IMPORTANTE: se usa exactamente el modelo del artículo (tal cual lo pasaste)
+    explainer = SHAPExplainer(
+        CSV_PATH,
+        lambda **kwargs: XGBClassifier(random_state=42, eval_metric="mlogloss"),
+        TARGET_COLUMN
+    )
 
     # 1) Entrenar modelo
     explainer.train_and_evaluate()
@@ -64,14 +55,15 @@ if __name__ == "__main__":
     print("SHAP values shape:", np.array(explainer.shap_values).shape)
 
     # --------------------------------------------
-    # ANÁLISIS DE INSTANCIA DEL TEST
+    # ANÁLISIS DE INSTANCIA DEL CONJUNTO DE PRUEBA
     # --------------------------------------------
-    print("\n--- Algoritmo 1: Diferencia de probabilidad entre clases (instancia del test) ---")
+
+    print("\n--- Algoritmo 1: Diferencia de probabilidad entre clases (instancia del conjunto de prueba) ---")
     prob_diffs = explainer.plot_probability_differences(
         INSTANCE_INDEX,
         instance_type="test",
         class_names=CLASS_NAMES,
-        instance_label=f"Instance {INSTANCE_INDEX}"
+        instance_label=f"Instancia {INSTANCE_INDEX}"
     )
 
     for i, (diff, c1, c2) in enumerate(prob_diffs):
@@ -79,22 +71,24 @@ if __name__ == "__main__":
 
     print("\nIngrese los números de los pares que desea analizar (ej. 1 o 1,2):")
     user_input = input("Opción(es): ")
+
     selected_indices = [int(i.strip()) - 1 for i in user_input.split(",") if i.strip().isdigit()]
     selected_pairs = [(prob_diffs[i][1], prob_diffs[i][2]) for i in selected_indices if 0 <= i < len(prob_diffs)]
 
-    print("\n--- Algoritmo 2: Diferencias SHAP para pares seleccionados (test) ---")
+    print("\n--- Algoritmo 2: Diferencias SHAP para pares seleccionados ---")
     explainer.explain_selected_pairs(
         INSTANCE_INDEX,
         selected_pairs=selected_pairs,
         instance_type="test",
         class_names=CLASS_NAMES,
-        instance_label=f"Instance {INSTANCE_INDEX}"
+        instance_label=f"Instancia {INSTANCE_INDEX}"
     )
 
     # --------------------------------------------
     # ANÁLISIS DE NUEVA INSTANCIA EXTERNA
     # --------------------------------------------
-    print("\n--- Algoritmo 1: Diferencia de probabilidad (instancia externa) ---")
+
+    print("\n--- Algoritmo 1: Diferencia de probabilidad para instancia externa ---")
     new_diffs = explainer.plot_probability_differences(
         NEW_INSTANCE,
         instance_type="new",
@@ -107,10 +101,11 @@ if __name__ == "__main__":
 
     print("\nIngrese los números de los pares que desea analizar para la instancia externa (ej. 1 o 1,2):")
     new_input = input("Opción(es): ")
+
     selected_indices_ext = [int(i.strip()) - 1 for i in new_input.split(",") if i.strip().isdigit()]
     selected_new_pairs = [(new_diffs[i][1], new_diffs[i][2]) for i in selected_indices_ext if 0 <= i < len(new_diffs)]
 
-    print("\n--- Algoritmo 2: Diferencias SHAP para pares seleccionados (instancia externa) ---")
+    print("\n--- Algoritmo 2: Diferencias SHAP para la instancia externa ---")
     explainer.explain_selected_pairs(
         NEW_INSTANCE,
         selected_pairs=selected_new_pairs,
@@ -122,12 +117,13 @@ if __name__ == "__main__":
     # --------------------------------------------
     # FIGURAS GLOBALES
     # --------------------------------------------
+
     explainer.plot_global_violin_by_class(
         class_names=CLASS_NAMES,
         use_normalized=True,
-        dataset_name="Iris",
         mode="pooled_features",
-        save_path="iris_global_violin.png",
+        dataset_name="Wine",
+        save_path="wine_global_violin.png",
         dpi=600,
         figsize=(8, 5),
         violin_alpha=0.75,
@@ -136,8 +132,8 @@ if __name__ == "__main__":
 
     explainer.plot_class_distribution_bar(
         class_names=CLASS_NAMES,
-        dataset_name="Iris",
-        save_path="iris_class_distribution.png",
+        dataset_name="Wine",
+        save_path="wine_class_distribution.png",
         dpi=600,
         figsize=(8, 5),
         cmap_min=0.2,
@@ -148,16 +144,20 @@ if __name__ == "__main__":
     # --------------------------------------------
     # MÉTRICAS SHAP-LCD (par fijo)
     # --------------------------------------------
+
     print("\n--- Evaluación SHAP_LCD (par fijo) ---")
+
+    # Ejemplo de par fijo (ajústalo si quieres):
+    # (0,1) = wine_class_0 vs wine_class_1
     df_inst, summary = explainer.evaluate_shap_lcd_pair(
-        pair=(1, 2),
+        pair=(0, 1),
         class_names=CLASS_NAMES,
         filter_mode="true",
         n_instances=None,
         M=40,
         sigma=0.02,
         top_k=10,
-        tau=0.95,
+        tau=0.90,
         normalize="l2",
         seed=42
     )
@@ -168,21 +168,22 @@ if __name__ == "__main__":
     print("\nPrimeras filas:")
     print(df_inst.head(10).to_string(index=False))
 
-    df_inst.to_csv("iris_shap_lcd_pair_metrics.csv", index=False)
+    df_inst.to_csv("wine_shap_lcd_pair_metrics_0_1.csv", index=False)
 
     # --------------------------------------------
     # COMPARACIÓN DE CONSISTENCIA (dos versiones)
     # --------------------------------------------
+
     print("\n--- Comparación de consistencia (pred->exp vs exp->pred) ---")
     df_cmp, summary_cmp = explainer.evaluate_shap_lcd_pair_compare_consistency(
-        pair=(1, 2),
+        pair=(0, 1),   # puedes cambiarlo a (1,2) o (0,2)
         class_names=CLASS_NAMES,
         filter_mode="true",
         n_instances=None,
         M=40,
         sigma=0.02,
         top_k=10,
-        tau=0.95,
+        tau=0.90,
         normalize="l2",
         seed=42
     )
@@ -193,7 +194,8 @@ if __name__ == "__main__":
     print("\nPrimeras filas df_cmp:")
     print(df_cmp.head().to_string(index=False))
 
-    df_cmp.to_csv("iris_compare_consistency_0_1.csv", index=False)
+    df_cmp.to_csv("wine_compare_consistency_0_1.csv", index=False)
+
 
 print("N instancias evaluadas:", len(df_inst))
 print("M (perturbaciones por instancia):", 40)  # o el M que estés usando
