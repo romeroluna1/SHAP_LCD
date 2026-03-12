@@ -9,6 +9,8 @@ import sys
 import json
 import os
 
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
 TARGET_COLUMN = 'target'
 INSTANCE_INDEX = 10
 
