@@ -17,7 +17,7 @@
     "target_column": "target",
     "new_instance": [13.0, 1.80, 2.43, 16.0, 102.0, 2.86, 3.03, 0.30, 2.30, 6.50, 1.04, 3.80, 1280.0]
   },
-  "work-infant": {
+  "work_infant": {
     "type": "custom",
     "csv": "df_Menores_dumy.csv",
     "target_column": "edad",
