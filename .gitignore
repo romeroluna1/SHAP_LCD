@@ -2,4 +2,6 @@
 *.pyc
 *.csv
 *.json
+*.zip
+*.rar
 !datasets_registry.json
