@@ -1,0 +1,7 @@
+scikit-learn 
+requests 
+plotly 
+opencv-python 
+colorama 
+shap 
+seaborn
