@@ -175,6 +175,7 @@ class SHAPExplainer:
         plt.yticks(fontsize=16)
         plt.tight_layout()
         plt.savefig(f"{self.path_images}/Grafica_probability_diff_values_{instance_label}.png", dpi=300, bbox_inches='tight')
+        plt.close()
 
         return diffs
 
@@ -231,3 +232,4 @@ class SHAPExplainer:
             plt.yticks(fontsize=18)
             plt.tight_layout()
             plt.savefig(f"{self.path_images}/Grafica_diff_values_shap_between_class_{class_i}__{class_j}-{instance_label}.png", dpi=300, bbox_inches='tight')
+            plt.close()
