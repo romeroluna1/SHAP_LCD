@@ -21,7 +21,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import balanced_accuracy_score, roc_auc_score
 import os
+
+IMBALANCE_RATIO_THRESHOLD = 1.5
 
 class SHAPExplainer:
     def __init__(self, csv_path, model_class, target_column, path_save_images, n_splits=10, test_size=0.3, random_state=42, sep=','):
@@ -41,6 +44,7 @@ class SHAPExplainer:
         self.modelo_entrenado_70 = None
         self.explainer = None
         self.exist_database_path = os.path.exists(self.csv_path)
+        self.isBalanced = None
         self._load_data()
         self.path_images = path_save_images
         if not os.path.exists(self.path_images):
@@ -54,6 +58,7 @@ class SHAPExplainer:
         df = pd.read_csv(self.csv_path, sep=self.sep)
         self.df = df.copy()
         self.y = df[self.target_column].values
+        self.isBalanced = self.check_balance(df)
         df_features = df.drop(columns=[self.target_column])
         for col in df_features.select_dtypes(include='object').columns:
             df_features[col] = pd.Categorical(df_features[col]).codes
@@ -61,6 +66,27 @@ class SHAPExplainer:
         self.X_norm = self.scaler.fit_transform(self.X)
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
             self.X_norm, self.y, test_size=self.test_size, stratify=self.y, random_state=self.random_state)
+
+    def check_balance(self, df=None):
+        if not self.exist_database_path or df is None:
+            return
+
+        counts = df[self.target_column].value_counts()
+        percentages = df[self.target_column].value_counts(normalize=True) * 100
+        majority = counts.max()
+        minority = counts.min()
+        imbalance_ratio = majority / minority
+        isBalanced = imbalance_ratio <= IMBALANCE_RATIO_THRESHOLD
+        if not isBalanced:
+            print(f"\n>>> DATASET DESBALANCEADO (ratio {imbalance_ratio:.1f} > umbral {IMBALANCE_RATIO_THRESHOLD})")
+        else:
+            print(f"\n>>> Dataset BALANCEADO (ratio {imbalance_ratio:.1f} <= umbral {IMBALANCE_RATIO_THRESHOLD})")
+            print("=" * 50)
+
+        print("Distribución de clases en el conjunto de entrenamiento:")
+        print(counts)
+
+        return isBalanced
 
     def _init_explainer(self):
         model_name = self.modelo_entrenado_70.__class__.__name__
@@ -76,7 +102,7 @@ class SHAPExplainer:
         if not self.exist_database_path:
             return
 
-        cv = StratifiedKFold(n_splits=self.n_splits, shuffle=True, random_state=self.random_state)
+        cv = StratifiedKFold(n_splits=self.n_splits if self.isBalanced else 4, shuffle=True, random_state=self.random_state)
         for fold, (train_index, val_index) in enumerate(cv.split(self.X_train, self.y_train), start=1):
             X_fold_train, X_fold_val = self.X_train[train_index], self.X_train[val_index]
             y_fold_train, y_fold_val = self.y_train[train_index], self.y_train[val_index]
@@ -86,8 +112,19 @@ class SHAPExplainer:
                 modelo = self.model_class()
             modelo.fit(X_fold_train, y_fold_train)
             self.modelos_guardados.append(modelo)
-            accuracy = modelo.score(X_fold_val, y_fold_val)
-            self.resultados.append({'Pliegue': f'Pliegue {fold}', 'Accuracy': accuracy})
+            result = None
+            if self.isBalanced:
+                accuracy = modelo.score(X_fold_val, y_fold_val)
+                result = { 'Pliegue': f'Pliegue {fold}', 'Accuracy': accuracy }
+            else:
+                y_pred = modelo.predict(X_fold_val)
+                y_probs = modelo.predict_proba(X_fold_val)
+                balance_accuracy = balanced_accuracy_score(y_fold_val, y_pred)
+
+                roc_auc = roc_auc_score(y_fold_val, y_probs[:, 1]) if y_probs.shape[1] == 2 else roc_auc_score(y_fold_val, y_probs, multi_class='ovr', labels=modelo.classes_)
+                result = { 'Pliegue': f'Pliegue {fold}', 'Balanced Accuracy': balance_accuracy, 'ROC AUC': roc_auc }
+            
+            self.resultados.append(result)
 
         print("\nResultados de Validación Cruzada:")
         df = pd.DataFrame(self.resultados)
