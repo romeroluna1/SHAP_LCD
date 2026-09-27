@@ -63,9 +63,10 @@ class SHAPExplainer:
         for col in df_features.select_dtypes(include='object').columns:
             df_features[col] = pd.Categorical(df_features[col]).codes
         self.X = df_features.values
-        self.X_norm = self.scaler.fit_transform(self.X)
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            self.X_norm, self.y, test_size=self.test_size, stratify=self.y, random_state=self.random_state)
+            self.X, self.y, test_size=self.test_size, stratify=self.y, random_state=self.random_state)
+        self.X_train = self.scaler.fit_transform(self.X_train)
+        self.X_test = self.scaler.transform(self.X_test)
 
     def check_balance(self, df=None):
         if not self.exist_database_path or df is None:
