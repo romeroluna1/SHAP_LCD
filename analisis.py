@@ -804,6 +804,7 @@ grafica_boxplots(
 )
 
 
+
 # ============================================================
 # 4. TRABAJO INFANTIL
 # ============================================================
@@ -813,32 +814,151 @@ print("#" * 80)
 print("# DATASET TRABAJO INFANTIL")
 print("#" * 80)
 
-trabajo_path = (
-    "df_Menores_dumy.csv"
-)
+trabajo_path = "df_Menores_dumy.csv"
+
+# Variable objetivo del dataset (actividad principal del menor)
+TARGET_TRABAJO = "ocupa_mptiempo"
+
+# Archivo opcional con los nombres de las clases de la variable
+# objetivo, con el mismo formato que los de Iris y Vehicle.
+# Si no existe, se usan las etiquetas que traiga el dataset.
+TRABAJO_CLASS_FILE = "CLASS_NAMES_WORK_INFANT.json"
 
 df_trabajo = pd.read_csv(
     trabajo_path,
-    sep=";"
+    sep=None,           # detecta ; o , automáticamente
+    engine="python"
 )
 
-print(
-    "\nPrimeras filas:"
-)
 
-print(
-    df_trabajo.head()
-)
+def corregir_codificacion(texto):
+    """
+    Repara nombres guardados con doble codificación
+    (ej. 'niÃ±os' -> 'niños'). Si no aplica, devuelve el original.
+    """
+    try:
+        return texto.encode("latin-1").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return texto
 
-print(
-    f"\nRegistros: "
-    f"{df_trabajo.shape[0]}"
-)
 
-print(
-    f"Atributos: "
-    f"{df_trabajo.shape[1]}"
-)
+df_trabajo.columns = [
+    corregir_codificacion(c).strip() for c in df_trabajo.columns
+]
+
+print("\nPrimeras filas:")
+print(df_trabajo.head())
+
+print(f"\nRegistros: {df_trabajo.shape[0]}")
+print(f"Columnas:  {df_trabajo.shape[1]}")
+
+
+# ------------------------------------------------------------
+# Utilidades para este dataset
+# ------------------------------------------------------------
+
+def buscar_columna(df, candidatos):
+    """
+    Devuelve la primera columna del DataFrame que coincida
+    (sin distinguir mayúsculas) con alguno de los candidatos.
+    Si ninguna coincide exactamente, busca por contenido.
+    """
+
+    columnas = {c.lower().strip(): c for c in df.columns}
+
+    for cand in candidatos:
+        if cand.lower() in columnas:
+            return columnas[cand.lower()]
+
+    for cand in candidatos:
+        for c in df.columns:
+            if cand.lower() in c.lower():
+                return c
+
+    return None
+
+
+def columnas_dummy_de(df, variable):
+    """
+    Devuelve las columnas dummy que pertenecen a una variable,
+    asumiendo el formato 'variable = valor'.
+    """
+
+    resultado = []
+
+    for c in df.columns:
+
+        if "=" not in c:
+            continue
+
+        base = c.split("=", 1)[0].strip().lower()
+
+        if base == variable.lower():
+            resultado.append(c)
+
+    return resultado
+
+
+def reconstruir_categorica(df, variable):
+    """
+    Reconstruye una variable categórica a partir de sus columnas
+    dummy ('variable = valor'). Devuelve una Serie con el valor
+    de la categoría en cada fila, o None si no hay dummies.
+    Las filas sin ninguna dummy activa quedan como NaN.
+    """
+
+    cols = columnas_dummy_de(df, variable)
+
+    if len(cols) == 0:
+        return None
+
+    etiquetas = {
+        c: c.split("=", 1)[1].strip()
+        for c in cols
+    }
+
+    # Convertir True/False, "1"/"0", etc. a numérico
+    sub = (
+        df[cols]
+        .replace({"True": 1, "False": 0, True: 1, False: 0})
+        .apply(pd.to_numeric, errors="coerce")
+        .fillna(0)
+    )
+
+    activa = sub.sum(axis=1) > 0
+
+    serie = sub.idxmax(axis=1).map(etiquetas)
+
+    serie[~activa] = pd.NA
+
+    return serie.rename(variable)
+
+
+def obtener_variable(df, variable, candidatos_extra=None):
+    """
+    Obtiene una variable ya sea como columna directa o
+    reconstruida desde dummies. Devuelve (Serie, origen).
+    """
+
+    col = buscar_columna(
+        df,
+        [variable] + (candidatos_extra or [])
+    )
+
+    # Si la columna directa es en realidad una dummy, ignorarla
+    if col is not None and "=" not in col:
+        return df[col], f"columna '{col}'"
+
+    serie = reconstruir_categorica(df, variable)
+
+    if serie is not None:
+        return serie, "reconstruida desde columnas dummy"
+
+    return None, None
+
+
+def formato_miles(valor):
+    return f"{int(valor):,}".replace(",", ".")
 
 
 # ------------------------------------------------------------
@@ -852,331 +972,558 @@ analizar_faltantes(
 
 
 # ------------------------------------------------------------
-# Valores cero
+# Variable objetivo: ocupa_mptiempo
 # ------------------------------------------------------------
 
-print(
-    "\n\nAnálisis de valores cero:"
+print("\n\n" + "=" * 70)
+print(f"VARIABLE OBJETIVO - {TARGET_TRABAJO}")
+print("=" * 70)
+
+y_trabajo, origen_target = obtener_variable(
+    df_trabajo,
+    TARGET_TRABAJO
 )
 
+trabajo_class_names = None
+
+if os.path.exists(TRABAJO_CLASS_FILE):
+    trabajo_class_names = cargar_nombres_clases(TRABAJO_CLASS_FILE)
+    print(f"Nombres de clases cargados desde {TRABAJO_CLASS_FILE}")
+
+if y_trabajo is None:
+
+    print(
+        f"ADVERTENCIA: no se encontró '{TARGET_TRABAJO}' ni como "
+        f"columna ni como dummies. Revise el nombre de la variable."
+    )
+
+    cantidad_clases_trabajo = "N/A"
+
+else:
+
+    print(f"Origen: {origen_target}")
+
+    y_trabajo = y_trabajo.dropna()
+
+    # Aplicar nombres de clases si la variable es numérica
+    if trabajo_class_names is not None:
+        try:
+            y_trabajo = y_trabajo.astype(int).map(
+                lambda k: trabajo_class_names.get(k, str(k))
+            )
+        except (ValueError, TypeError):
+            pass
+
+    conteo_target = y_trabajo.value_counts()
+
+    cantidad_clases_trabajo = len(conteo_target)
+
+    print(f"Cantidad de clases: {cantidad_clases_trabajo}")
+    print("\nDistribución de clases (n y %):")
+
+    for clase, n in conteo_target.items():
+        pct = n / len(y_trabajo) * 100
+        print(f"  {clase}: {formato_miles(n)} ({pct:.2f}%)")
+
+    ratio = conteo_target.max() / conteo_target.min()
+
+    print(
+        f"\nRazón de desbalance (mayoritaria / minoritaria): "
+        f"{ratio:.1f} : 1"
+    )
+
+    # Gráfica: barras horizontales con n y porcentaje
+    plt.figure(figsize=(11, 6))
+
+    orden = conteo_target.sort_values(ascending=True)
+
+    bars = plt.barh(
+        [str(c) for c in orden.index],
+        orden.values
+    )
+
+    plt.title(
+        f"Distribución de la variable objetivo "
+        f"({TARGET_TRABAJO}) - Trabajo Infantil"
+    )
+
+    plt.xlabel("Cantidad de registros")
+    plt.ylabel("Clase")
+
+    plt.gca().xaxis.set_major_formatter(
+        FuncFormatter(lambda x, p: formato_miles(x))
+    )
+
+    for bar, n in zip(bars, orden.values):
+        pct = n / len(y_trabajo) * 100
+        plt.text(
+            bar.get_width(),
+            bar.get_y() + bar.get_height() / 2,
+            f"  {formato_miles(n)} ({pct:.1f}%)",
+            va="center"
+        )
+
+    plt.xlim(0, orden.max() * 1.25)
+
+    guardar_grafica(
+        "trabajo_infantil_distribucion_clases.png"
+    )
+
+
+# ------------------------------------------------------------
+# Tipos de variables (numéricas, dummy/binarias)
+# ------------------------------------------------------------
+
+print("\n\nTipos de variables:")
+
+cols_target = columnas_dummy_de(df_trabajo, TARGET_TRABAJO)
+
+if TARGET_TRABAJO in df_trabajo.columns:
+    cols_target.append(TARGET_TRABAJO)
+
 cols_dummy = [
-    c
-    for c in df_trabajo.columns
-    if " = " in c or "=" in c
+    c for c in df_trabajo.columns
+    if "=" in c and c not in cols_target
+]
+
+# Columnas enteras con muy pocos valores distintos (1/2, 1..4) son
+# categóricas codificadas como número, no cantidades.
+MAX_VALORES_CATEGORICA = 4
+
+cols_restantes = [
+    c for c in df_trabajo.select_dtypes(include="number").columns
+    if c not in cols_dummy and c not in cols_target
+]
+
+cols_cat_codificadas = [
+    c for c in cols_restantes
+    if df_trabajo[c].nunique() <= MAX_VALORES_CATEGORICA
 ]
 
 cols_numericas = [
-    c
-    for c in df_trabajo
-    .select_dtypes(
-        include="number"
-    )
-    .columns
-    if c not in cols_dummy
+    c for c in cols_restantes if c not in cols_cat_codificadas
 ]
 
-ceros = {
-    col:
-    (
-        df_trabajo[col] == 0
-    ).sum()
+variables_origen_dummy = sorted({
+    c.split("=", 1)[0].strip() for c in cols_dummy
+})
 
-    for col in cols_numericas
+print(f"  Columnas de la variable objetivo:      {len(cols_target)}")
+print(f"  Columnas dummy (0/1):                  {len(cols_dummy)}")
+print(
+    f"    provenientes de {len(variables_origen_dummy)} "
+    f"variables categóricas: {variables_origen_dummy}"
+)
+print(
+    f"  Categóricas codificadas como entero:   "
+    f"{len(cols_cat_codificadas)}"
+)
+for c in cols_cat_codificadas:
+    print(f"    {c}: valores {sorted(df_trabajo[c].unique().tolist())}")
+print(f"  Numéricas (cantidades):                {len(cols_numericas)}")
+print(f"    {cols_numericas}")
 
-    if (
-        df_trabajo[col] == 0
-    ).sum() > 0
-}
+atributos_predictivos_trabajo = (
+    len(cols_dummy) + len(cols_cat_codificadas) + len(cols_numericas)
+)
 
-for col, cantidad in (
-    ceros.items()
-):
+print(
+    f"\n  Total atributos predictivos: {atributos_predictivos_trabajo} "
+    f"(+ {len(cols_target)} de la variable objetivo = "
+    f"{df_trabajo.shape[1]} columnas)"
+)
 
-    porcentaje = (
-        cantidad /
-        len(df_trabajo) *
-        100
-    )
+
+# ------------------------------------------------------------
+# Verificación de calidad adicional
+# ------------------------------------------------------------
+
+print("\n\n" + "=" * 70)
+print("VERIFICACIÓN DE CALIDAD - TRABAJO INFANTIL")
+print("=" * 70)
+
+# Filas duplicadas
+n_dup = int(df_trabajo.duplicated().sum())
+print(
+    f"Filas exactamente duplicadas: {formato_miles(n_dup)} "
+    f"({n_dup / len(df_trabajo) * 100:.2f}%) -> "
+    f"{formato_miles(len(df_trabajo) - n_dup)} filas únicas"
+)
+
+# Columnas casi constantes (un solo valor en >= 99% de las filas)
+print("\nColumnas casi constantes (>= 99% un mismo valor):")
+for c in df_trabajo.columns:
+    top_pct = df_trabajo[c].value_counts(normalize=True).iloc[0] * 100
+    if top_pct >= 99:
+        print(
+            f"  {c}: valor {df_trabajo[c].mode().iloc[0]} "
+            f"en {top_pct:.2f}% de las filas"
+        )
+
+# Pares de variables numéricas casi idénticas
+print("\nVariables numéricas con correlación >= 0.99:")
+if len(cols_numericas) > 1:
+    corr = df_trabajo[cols_numericas].corr().abs()
+    for i, a in enumerate(cols_numericas):
+        for b in cols_numericas[i + 1:]:
+            if corr.loc[a, b] >= 0.99:
+                iguales = (df_trabajo[a] == df_trabajo[b]).mean() * 100
+                print(
+                    f"  {a} ~ {b}: r = {corr.loc[a, b]:.4f} "
+                    f"(valores idénticos en {iguales:.1f}% de las filas)"
+                )
+
+# Posible fuga de información: variables categóricas que
+# determinan por completo alguna clase de la variable objetivo
+if y_trabajo is not None:
 
     print(
-        f"{col}: "
-        f"{cantidad:,} "
-        f"({porcentaje:.2f}%)"
-        .replace(",", ".")
+        "\nClases de la variable objetivo concentradas al 100% en una "
+        "categoría poco frecuente (posible fuga de información):"
     )
+
+    for var in variables_origen_dummy:
+
+        cat = reconstruir_categorica(df_trabajo, var)
+
+        tabla = pd.crosstab(y_trabajo, cat.loc[y_trabajo.index])
+
+        for clase in tabla.index:
+
+            fila = tabla.loc[clase]
+
+            if fila.sum() == 0 or not (fila == fila.sum()).any():
+                continue
+
+            categoria = fila.idxmax()
+
+            total_cat = tabla[categoria].sum()
+
+            # Solo interesa si la categoría es rara en el dataset:
+            # una clase 100% dentro de una categoría mayoritaria
+            # no aporta información.
+            if total_cat / len(y_trabajo) < 0.05:
+                print(
+                    f"  clase {clase} ({formato_miles(fila.sum())} reg.) "
+                    f"está 100% en '{var} = {categoria}', categoría con "
+                    f"{formato_miles(total_cat)} registros en total"
+                )
+
+
+# ------------------------------------------------------------
+# Valores cero en variables numéricas
+# ------------------------------------------------------------
+
+print("\n\nAnálisis de valores cero (variables numéricas):")
+
+for col in cols_numericas:
+
+    cantidad = int((df_trabajo[col] == 0).sum())
+
+    if cantidad > 0:
+
+        porcentaje = cantidad / len(df_trabajo) * 100
+
+        print(
+            f"  {col}: {formato_miles(cantidad)} "
+            f"({porcentaje:.2f}%)"
+        )
 
 
 # ------------------------------------------------------------
 # Edad
 # ------------------------------------------------------------
 
-print(
-    "\n\nDistribución de edades:"
+col_edad = buscar_columna(
+    df_trabajo,
+    ["edad", "age", "p6040"]
 )
 
-print(
-    df_trabajo["edad"].describe()
-)
+if col_edad is None:
 
-plt.figure(
-    figsize=(10, 6)
-)
+    print("\nNo se encontró la variable de edad.")
 
-sns.histplot(
-    df_trabajo["edad"],
-    kde=True
-)
+else:
 
-plt.title(
-    "Distribución de edades - "
-    "Trabajo Infantil"
-)
+    print(f"\n\nDistribución de edades ({col_edad}):")
+    print(df_trabajo[col_edad].describe())
 
-plt.xlabel(
-    "Edad"
-)
+    conteo_edad = df_trabajo[col_edad].value_counts().sort_index()
 
-plt.ylabel(
-    "Frecuencia"
-)
+    print("\nRegistros por edad:")
+    for e, n in conteo_edad.items():
+        print(f"  {e:>2} años: {formato_miles(n)}")
 
-guardar_grafica(
-    "trabajo_infantil_distribucion_edades.png"
-)
+    fuera = df_trabajo[
+        (df_trabajo[col_edad] < 5) | (df_trabajo[col_edad] > 17)
+    ]
 
+    if len(fuera) > 0:
+        print(
+            f"\nNota: {formato_miles(len(fuera))} registros "
+            f"({len(fuera) / len(df_trabajo) * 100:.1f}%) tienen edad "
+            f"fuera del rango 5-17 años. Revisar si deben incluirse "
+            f"en el análisis de trabajo infantil."
+        )
 
-# ------------------------------------------------------------
-# Género
-# ------------------------------------------------------------
+    plt.figure(figsize=(10, 6))
 
-print(
-    "\n\nDistribución de género:"
-)
+    edades = df_trabajo[col_edad].dropna()
 
-genero_counts = pd.Series({
-
-    "Hombre":
-    df_trabajo[
-        "sexo = hombre"
-    ].sum(),
-
-    "Mujer":
-    df_trabajo[
-        "sexo = mujer"
-    ].sum()
-})
-
-print(
-    genero_counts
-)
-
-plt.figure(
-    figsize=(8, 6)
-)
-
-bars = sns.barplot(
-    x=genero_counts.index,
-    y=genero_counts.values
-)
-
-plt.title(
-    "Distribución de género - "
-    "Trabajo Infantil"
-)
-
-plt.xlabel(
-    "Género"
-)
-
-plt.ylabel(
-    "Cantidad"
-)
-
-for bar, valor in zip(
-    bars.patches,
-    genero_counts.values
-):
-
-    plt.text(
-        bar.get_x()
-        + bar.get_width() / 2,
-        bar.get_height(),
-        f"{valor:,}".replace(
-            ",", "."
-        ),
-        ha="center",
-        va="bottom"
+    # Una barra por cada edad entera
+    sns.histplot(
+        edades,
+        discrete=True,
+        shrink=0.8
     )
 
-guardar_grafica(
-    "trabajo_infantil_distribucion_genero.png"
+    plt.title("Distribución de edades - Trabajo Infantil")
+    plt.xlabel("Edad (años)")
+    plt.ylabel("Cantidad de registros")
+
+    plt.xticks(range(int(edades.min()), int(edades.max()) + 1))
+
+    plt.gca().yaxis.set_major_formatter(
+        FuncFormatter(lambda x, p: formato_miles(x))
+    )
+
+    guardar_grafica(
+        "trabajo_infantil_distribucion_edades.png"
+    )
+
+
+# ------------------------------------------------------------
+# Género (sexo)
+# ------------------------------------------------------------
+
+sexo_trabajo, origen_sexo = obtener_variable(
+    df_trabajo,
+    "sexo",
+    candidatos_extra=["genero", "género", "p6020"]
 )
+
+if sexo_trabajo is None:
+
+    print("\nNo se encontró la variable de sexo/género.")
+
+else:
+
+    print(f"\n\nDistribución de género ({origen_sexo}):")
+
+    genero_counts = sexo_trabajo.dropna().value_counts()
+
+    for g, n in genero_counts.items():
+        pct = n / genero_counts.sum() * 100
+        print(f"  {g}: {formato_miles(n)} ({pct:.2f}%)")
+
+    plt.figure(figsize=(8, 6))
+
+    bars = sns.barplot(
+        x=[str(g).capitalize() for g in genero_counts.index],
+        y=genero_counts.values
+    )
+
+    plt.title("Distribución de género - Trabajo Infantil")
+    plt.xlabel("Género")
+    plt.ylabel("Cantidad de registros")
+
+    plt.gca().yaxis.set_major_formatter(
+        FuncFormatter(lambda x, p: formato_miles(x))
+    )
+
+    for bar, n in zip(bars.patches, genero_counts.values):
+        pct = n / genero_counts.sum() * 100
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height(),
+            f"{formato_miles(n)} ({pct:.1f}%)",
+            ha="center",
+            va="bottom"
+        )
+
+    guardar_grafica(
+        "trabajo_infantil_distribucion_genero.png"
+    )
+
+
+# ------------------------------------------------------------
+# Variable objetivo cruzada con sexo y edad
+# ------------------------------------------------------------
+
+if y_trabajo is not None and sexo_trabajo is not None:
+
+    cruce = pd.crosstab(
+        y_trabajo.astype(str),
+        sexo_trabajo.loc[y_trabajo.index],
+        normalize="index"
+    ) * 100
+
+    print("\n\nDistribución de género dentro de cada clase (%):")
+    print(cruce.round(1))
+
+    cruce.plot(
+        kind="barh",
+        stacked=True,
+        figsize=(11, 6)
+    )
+
+    plt.title(
+        f"Composición por género de cada clase "
+        f"({TARGET_TRABAJO}) - Trabajo Infantil"
+    )
+
+    plt.xlabel("Porcentaje de registros de la clase (%)")
+    plt.ylabel("Clase")
+    plt.xlim(0, 100)
+    plt.legend(title="Género", loc="lower right")
+
+    guardar_grafica(
+        "trabajo_infantil_clase_por_genero.png"
+    )
+
+
+if y_trabajo is not None and col_edad is not None:
+
+    df_ce = pd.DataFrame({
+        "clase": y_trabajo.astype(str),   # como texto: eje categórico
+        "edad": df_trabajo.loc[y_trabajo.index, col_edad]
+    }).dropna()
+
+    plt.figure(figsize=(11, 6))
+
+    orden_clases = (
+        df_ce["clase"].value_counts().index.tolist()
+    )
+
+    sns.boxplot(
+        data=df_ce,
+        x="edad",
+        y="clase",
+        order=orden_clases
+    )
+
+    plt.title(
+        f"Edad según clase ({TARGET_TRABAJO}) - Trabajo Infantil"
+    )
+
+    plt.xlabel("Edad (años)")
+    plt.ylabel("Clase")
+
+    guardar_grafica(
+        "trabajo_infantil_edad_por_clase.png"
+    )
 
 
 # ------------------------------------------------------------
 # Formato COP
 # ------------------------------------------------------------
 
-def formato_cop(
-    x,
-    pos
-):
+def formato_cop(x, pos):
+    return f"${x:,.0f}".replace(",", ".")
 
-    return (
-        f"${x:,.0f}"
-        .replace(",", ".")
+
+fmt_cop = FuncFormatter(formato_cop)
+
+
+# ------------------------------------------------------------
+# Variables monetarias: ingresos y gastos
+# ------------------------------------------------------------
+
+def grafica_monetaria(df, columna, etiqueta, nombre_archivo):
+    """
+    Histograma (escala logarítmica) y boxplot de una variable
+    monetaria. Los valores cero se reportan aparte porque no
+    pueden representarse en escala logarítmica y suelen ser
+    registros sin información.
+    """
+
+    serie = pd.to_numeric(df[columna], errors="coerce").dropna()
+
+    n_ceros = int((serie == 0).sum())
+    n_neg = int((serie < 0).sum())
+    positivos = serie[serie > 0]
+
+    print(f"\n\nDistribución de {etiqueta.lower()} ({columna}):")
+    print(serie.describe().apply(lambda v: f"{v:,.0f}"))
+    print(
+        f"  Valores cero: {formato_miles(n_ceros)} "
+        f"({n_ceros / len(serie) * 100:.2f}%)"
     )
 
+    if n_neg > 0:
+        print(f"  Valores negativos: {formato_miles(n_neg)}")
 
-fmt_cop = FuncFormatter(
-    formato_cop
+    if len(positivos) == 0:
+        print("  No hay valores positivos para graficar.")
+        return
+
+    fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+
+    sns.histplot(
+        positivos,
+        log_scale=True,
+        bins=50,
+        ax=axes[0]
+    )
+
+    axes[0].set_title(
+        f"Distribución de {etiqueta.lower()} (escala log)"
+    )
+    axes[0].set_xlabel(f"{etiqueta} mensual (COP)")
+    axes[0].set_ylabel("Cantidad de registros")
+    axes[0].xaxis.set_major_formatter(fmt_cop)
+    axes[0].tick_params(axis="x", rotation=45)
+
+    sns.boxplot(
+        y=positivos,
+        ax=axes[1]
+    )
+
+    axes[1].set_yscale("log")
+    axes[1].set_title(
+        f"Boxplot de {etiqueta.lower()} (escala log)"
+    )
+    axes[1].set_ylabel(f"{etiqueta} mensual (COP)")
+    axes[1].yaxis.set_major_formatter(fmt_cop)
+
+    plt.suptitle(
+        f"{etiqueta} - Trabajo Infantil "
+        f"(se excluyen {formato_miles(n_ceros)} registros con valor 0)",
+        fontsize=13
+    )
+
+    guardar_grafica(nombre_archivo)
+
+
+col_ingreso = buscar_columna(
+    df_trabajo,
+    ["i_hogar", "ingreso_hogar", "ingr_hogar", "ingtotug", "ingreso"]
 )
 
-
-# ------------------------------------------------------------
-# Ingresos
-# ------------------------------------------------------------
-
-print(
-    "\n\nDistribución de ingresos:"
+col_gasto = buscar_columna(
+    df_trabajo,
+    ["i_ugasto", "ingr_mens_unit_gast", "gasto_hogar", "gasto"]
 )
 
-print(
-    df_trabajo[
-        "i_hogar"
-    ].describe()
-)
+if col_ingreso is None:
+    print("\nNo se encontró la variable de ingresos del hogar.")
+else:
+    grafica_monetaria(
+        df_trabajo,
+        col_ingreso,
+        "Ingresos del hogar",
+        "trabajo_infantil_distribucion_ingresos.png"
+    )
 
-fig, axes = plt.subplots(
-    1,
-    2,
-    figsize=(14, 6)
-)
-
-sns.histplot(
-    df_trabajo[
-        "i_hogar"
-    ],
-    kde=True,
-    ax=axes[0]
-)
-
-axes[0].set_title(
-    "Distribución de ingresos familiares"
-)
-
-axes[0].set_xlabel(
-    "Ingreso mensual (COP)"
-)
-
-axes[0].set_ylabel(
-    "Frecuencia"
-)
-
-axes[0].xaxis.set_major_formatter(
-    fmt_cop
-)
-
-axes[0].tick_params(
-    axis="x",
-    rotation=45
-)
-
-sns.boxplot(
-    y=df_trabajo[
-        "i_hogar"
-    ],
-    ax=axes[1]
-)
-
-axes[1].set_title(
-    "Boxplot de ingresos familiares"
-)
-
-axes[1].set_ylabel(
-    "Ingreso mensual (COP)"
-)
-
-axes[1].yaxis.set_major_formatter(
-    fmt_cop
-)
-
-guardar_grafica(
-    "trabajo_infantil_distribucion_ingresos.png"
-)
-
-
-# ------------------------------------------------------------
-# Gastos
-# ------------------------------------------------------------
-
-print(
-    "\n\nDistribución de gastos:"
-)
-
-print(
-    df_trabajo[
-        "i_ugasto"
-    ].describe()
-)
-
-fig, axes = plt.subplots(
-    1,
-    2,
-    figsize=(14, 6)
-)
-
-sns.histplot(
-    df_trabajo[
-        "i_ugasto"
-    ],
-    kde=True,
-    ax=axes[0]
-)
-
-axes[0].set_title(
-    "Distribución de gastos familiares"
-)
-
-axes[0].set_xlabel(
-    "Gasto mensual (COP)"
-)
-
-axes[0].set_ylabel(
-    "Frecuencia"
-)
-
-axes[0].xaxis.set_major_formatter(
-    fmt_cop
-)
-
-axes[0].tick_params(
-    axis="x",
-    rotation=45
-)
-
-sns.boxplot(
-    y=df_trabajo[
-        "i_ugasto"
-    ],
-    ax=axes[1]
-)
-
-axes[1].set_title(
-    "Boxplot de gastos familiares"
-)
-
-axes[1].set_ylabel(
-    "Gasto mensual (COP)"
-)
-
-axes[1].yaxis.set_major_formatter(
-    fmt_cop
-)
-
-guardar_grafica(
-    "trabajo_infantil_distribucion_gastos.png"
-)
+if col_gasto is None:
+    print("\nNo se encontró la variable de gastos del hogar.")
+else:
+    grafica_monetaria(
+        df_trabajo,
+        col_gasto,
+        "Gastos del hogar",
+        "trabajo_infantil_distribucion_gastos.png"
+    )
 
 
 # ============================================================
@@ -1185,6 +1532,7 @@ guardar_grafica(
 
 rangos = [
     0,
+    1,                  # separa los registros con valor 0
     500_000,
     1_000_000,
     2_000_000,
@@ -1194,8 +1542,9 @@ rangos = [
     float("inf")
 ]
 
-etiquetas = [
-    "$0-500K",
+etiquetas_rangos = [
+    "$0",
+    "$1-500K",
     "$500K-1M",
     "$1M-2M",
     "$2M-5M",
@@ -1204,143 +1553,87 @@ etiquetas = [
     "$50M+"
 ]
 
-df_trabajo[
-    "rango_ingresos"
-] = pd.cut(
-    df_trabajo[
-        "i_hogar"
-    ],
-    bins=rangos,
-    labels=etiquetas,
-    right=False
-)
 
-df_trabajo[
-    "rango_gastos"
-] = pd.cut(
-    df_trabajo[
-        "i_ugasto"
-    ],
-    bins=rangos,
-    labels=etiquetas,
-    right=False
-)
+def conteo_por_rangos(df, columna):
 
-conteo_ing = (
-    df_trabajo[
-        "rango_ingresos"
-    ]
-    .value_counts()
-    .sort_index()
-)
+    serie = pd.to_numeric(df[columna], errors="coerce")
 
-conteo_gas = (
-    df_trabajo[
-        "rango_gastos"
-    ]
-    .value_counts()
-    .sort_index()
-)
-
-print(
-    "\nDistribución por rangos de ingresos:"
-)
-
-print(
-    conteo_ing
-)
-
-print(
-    "\nDistribución por rangos de gastos:"
-)
-
-print(
-    conteo_gas
-)
-
-fig, axes = plt.subplots(
-    1,
-    2,
-    figsize=(16, 7)
-)
-
-sns.barplot(
-    x=conteo_ing.index,
-    y=conteo_ing.values,
-    ax=axes[0]
-)
-
-axes[0].set_title(
-    "Distribución de ingresos por rangos"
-)
-
-axes[0].set_xlabel(
-    "Rango de ingresos (COP)"
-)
-
-axes[0].set_ylabel(
-    "Cantidad de familias"
-)
-
-axes[0].tick_params(
-    axis="x",
-    rotation=45
-)
-
-for i, valor in enumerate(
-    conteo_ing.values
-):
-
-    axes[0].text(
-        i,
-        valor,
-        f"{valor:,}".replace(
-            ",", "."
-        ),
-        ha="center",
-        va="bottom"
+    return (
+        pd.cut(
+            serie,
+            bins=rangos,
+            labels=etiquetas_rangos,
+            right=False
+        )
+        .value_counts()
+        .reindex(etiquetas_rangos, fill_value=0)
     )
 
-sns.barplot(
-    x=conteo_gas.index,
-    y=conteo_gas.values,
-    ax=axes[1]
-)
 
-axes[1].set_title(
-    "Distribución de gastos por rangos"
-)
+def grafica_rangos(ax, conteo, titulo, xlabel):
 
-axes[1].set_xlabel(
-    "Rango de gastos (COP)"
-)
-
-axes[1].set_ylabel(
-    "Cantidad de familias"
-)
-
-axes[1].tick_params(
-    axis="x",
-    rotation=45
-)
-
-for i, valor in enumerate(
-    conteo_gas.values
-):
-
-    axes[1].text(
-        i,
-        valor,
-        f"{valor:,}".replace(
-            ",", "."
-        ),
-        ha="center",
-        va="bottom"
+    sns.barplot(
+        x=conteo.index.astype(str),
+        y=conteo.values,
+        ax=ax
     )
 
-guardar_grafica(
-    "trabajo_infantil_distribucion_por_rangos.png"
-)
+    ax.set_title(titulo)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("Cantidad de registros")
+    ax.tick_params(axis="x", rotation=45)
+    ax.yaxis.set_major_formatter(
+        FuncFormatter(lambda x, p: formato_miles(x))
+    )
+
+    for i, n in enumerate(conteo.values):
+        ax.text(
+            i,
+            n,
+            formato_miles(n),
+            ha="center",
+            va="bottom",
+            fontsize=9
+        )
+
+
+paneles = []
+
+if col_ingreso is not None:
+    conteo_ing = conteo_por_rangos(df_trabajo, col_ingreso)
+    print("\nDistribución por rangos de ingresos:")
+    print(conteo_ing)
+    paneles.append(
+        (conteo_ing, "Ingresos del hogar por rangos",
+         "Rango de ingresos (COP)")
+    )
+
+if col_gasto is not None:
+    conteo_gas = conteo_por_rangos(df_trabajo, col_gasto)
+    print("\nDistribución por rangos de gastos:")
+    print(conteo_gas)
+    paneles.append(
+        (conteo_gas, "Gastos del hogar por rangos",
+         "Rango de gastos (COP)")
+    )
+
+if paneles:
+
+    fig, axes = plt.subplots(
+        1,
+        len(paneles),
+        figsize=(8 * len(paneles), 7)
+    )
+
+    if len(paneles) == 1:
+        axes = [axes]
+
+    for ax, (conteo, titulo, xlabel) in zip(axes, paneles):
+        grafica_rangos(ax, conteo, titulo, xlabel)
+
+    guardar_grafica(
+        "trabajo_infantil_distribucion_por_rangos.png"
+    )
 
 
 # ============================================================
@@ -1372,7 +1665,7 @@ resumen = pd.DataFrame({
         df_iris.shape[1] - 1,
         df_wine.shape[1] - 1,
         df_vehicle.shape[1] - 1,
-        df_trabajo.shape[1]
+        atributos_predictivos_trabajo
     ],
 
     "Clases": [
@@ -1388,7 +1681,7 @@ resumen = pd.DataFrame({
             target_vehicle
         ].nunique(),
 
-        "N/A"
+        cantidad_clases_trabajo
     ]
 })
 
