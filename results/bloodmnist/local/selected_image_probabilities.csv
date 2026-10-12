@@ -1,0 +1,9 @@
+﻿class_id,class_name,probability
+0,Basophil,0.1925576
+1,Eosinophil,0.5804627
+2,Erythroblast,3.1582025e-05
+3,Immature granulocytes,0.003529657
+4,Lymphocyte,5.1442134e-05
+5,Monocyte,0.0047731115
+6,Neutrophil,0.21853772
+7,Platelet,5.6188193e-05

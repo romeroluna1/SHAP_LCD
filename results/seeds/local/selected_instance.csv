@@ -1,0 +1,2 @@
+test_position,true_class_index,true_class,predicted_class_index,predicted_class,area,perimeter,compactness,length_of_kernel,width_of_kernel,asymmetry_coefficient,length_of_kernel_groove,P_Kama,P_Rosa,P_Canadian
+25,0,Kama,0,Kama,15.499999999999998,14.86,0.882,5.877,3.396,4.711,5.528,0.8051650224849636,0.19368426394252222,0.0011507135725141455

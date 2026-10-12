@@ -1,0 +1,5 @@
+﻿-r requirements.txt
+
+torch>=2.5,<3
+transformers>=4.48,<6
+datasets>=3.2,<6

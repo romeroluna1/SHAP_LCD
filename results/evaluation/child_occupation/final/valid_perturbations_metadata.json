@@ -1,0 +1,16 @@
+{
+    "protocol": "valid perturbations in original feature space",
+    "quick_test": false,
+    "n_instances_per_pair": 50,
+    "M_perturbations_per_instance": 30,
+    "sigma_numeric_relative_to_training_range": 0.005,
+    "p_change_binary_categorical_ordinal": 0.05,
+    "tau": 0.85,
+    "top_k": 10,
+    "random_state": 42,
+    "numeric_continuous": "bounded Gaussian perturbation in original scale; clipped to observed training min/max",
+    "numeric_integer_like": "bounded Gaussian perturbation followed by projection to nearest value observed in training",
+    "binary": "kept in observed valid states; alternative valid state sampled with probability p_change",
+    "categorical_ordinal": "alternative observed category sampled from training empirical distribution with probability p_change",
+    "transformation": "perturbed raw rows transformed using the same fitted processor/encoder and MinMaxScaler as the final model"
+}

@@ -1,0 +1,24 @@
+﻿feature,type,valid_values
+niños_comparten_cuart_adul,categorical,si | no | nohaymenores
+pagan_energ,categorical,si | no_sitienen_el_servicio | no_tiene_el_servicio | si_conarriendo
+tipo_serv_sanitario,categorical,inodo_conec_alcanta | inod_canec_pozosep | no_serv_sanitario | inod_desca_direc_fueagua | letrina | inod_sin_conec
+pagan_serv_alcant,categorical,no_tiene_el_servicio | si | no_sitienen_el_servicio | si_conarriendo
+como_eli_basu,categorical,recoge_serv_aseo | la_queman | tiran_patio_lote_zanja | la_entierran | se_tira_fuente_hidrica | recogen_serv_informal
+clasif_basu,binary,2 | 1
+reutilizan_agua,binary,2 | 1
+recolectan_aguaLL,binary,2 | 1
+obt_agua,categorical,acueduc_publi | acueducto_comu_vere | lluvia | rio_quebrada_laguna | pozo_bomba | pozo_sin_bomba | embote_bolsa | carrotanque | aguatero | pila_publi
+ubic_sumin_agua,categorical,dentro_vivienda | fuera_vivienda_pero_enellote | fuera_vivienda_lote_o_terreno
+tratam_agua_cosu,categorical,tal_como_obt | la_hieven | compran_embo_bolsa | utili_filtros | le_ponen_cloro | la_decantan
+lugar_preparan_alim,categorical,cuarto_solo_para_cocinar | patio_enrramada_aire_libre | en_sala_comedor_con_lava_platos | en_sala_comedor_sin_lava_platos | cuarto_usado_ademas_pdormir | en_ninguna_parte
+tipo_ener_comb_usan_cocinar,categorical,gas_natural_red_publi | gas_propano | leÃ±a_madera | electricidad | carbon_de_leÃ±a | carbÃ³n_mineral | petrol_gaso_keros_alcoh_cocinol | maerial_desecho
+tienen_serv_tele,binary,2 | 1
+hg_realiza_act_produc,binary,2 | 1
+oficio_hogar,binary,2 | 1
+sexo,binary,hombre | mujer
+paren_jefeH,categorical,hijo_hijastro | nieto | otro_pari_feje | otro_pariente | herma_hermanstro | yrno_nuera | pareja_cony_espos | jefe(a) | pariente_serv_domes | pensionista | empleado_serrv_domes
+Lugar_Naci,categorical,este_muni | otro_muni | otro_pais
+siemprevivioaqui,categorical,si | no | nsnr
+padre_vive_h,categorical,si_vh | no_vh | fallecido
+madre_vive_h,categorical,si_vh | no_vh | fallecido
+se_considera,categorical,ningun_grupo_etnico | indigena | negro_mulato | raizal | palenquero | gitano

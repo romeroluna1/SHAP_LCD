@@ -1,0 +1,2 @@
+instance_label,class_j_index,class_j,class_r_index,class_r,probability_j,probability_r,delta_probability,reconstructed_delta_probability,reconstruction_error,n_shap_tokens,text
+test index 9,0,World,3,Sci/Tech,0.0032205183524638414,0.9635010361671448,-0.9602805178146809,-0.9602805178146809,0.0,44,"Card fraud unit nets 36,000 cards. In its first two years, the UK's dedicated card fraud unit, has recovered 36,000 stolen cards and 171 arrests - and estimates it saved 65m."
