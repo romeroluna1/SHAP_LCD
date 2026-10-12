@@ -6,35 +6,35 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](#license)
 [![DOI](https://img.shields.io/badge/DOI-10.1002%2Faisy.70397-blue.svg)](https://doi.org/10.1002/aisy.70397)
 
-SHAP-LCD explains why a model favors one class over another for a particular instance. Given two classes, \(C_j\) and \(C_r\), it compares their predicted probabilities and their class-specific SHAP contributions:
+SHAP-LCD explains why a model favors one class over another for a particular instance. Given two classes, $C_j$ and $C_r$, it compares their predicted probabilities and their class-specific SHAP contributions:
 
-\[
+$$
 \Delta P_i^{(C_j,C_r)} = P_i(C_j)-P_i(C_r)
-\]
+$$
 
-\[
+$$
 \Delta S_{m,i}^{(C_j,C_r)}
 = s_{m,i}^{(C_j)}-s_{m,i}^{(C_r)}
-\]
+$$
 
-A positive feature-level difference favors \(C_j\), whereas a negative difference favors \(C_r\).
+A positive feature-level difference favors $C_j$, whereas a negative difference favors $C_r$.
 
 ## Repository contents
 
 ```text
 SHAP_LCD/
-â”œâ”€â”€ src/shap_lcd/            Core SHAP-LCD implementation
-â”œâ”€â”€ examples/
-â”‚   â”œâ”€â”€ tabular/             Iris, Wine, Vehicle, Seeds, child occupation
-â”‚   â”œâ”€â”€ image/               Fashion-MNIST, HAM10000, BloodMNIST
-â”‚   â””â”€â”€ text/                AG News and 20 Newsgroups
-â”œâ”€â”€ evaluation/
-â”‚   â””â”€â”€ tabular/             Robustness evaluation in original feature space
-â”œâ”€â”€ data/                    Small tabular datasets
-â”œâ”€â”€ artifacts/               Included artifacts and external-artifact guide
-â”œâ”€â”€ requirements.txt         Core and tabular dependencies
-â”œâ”€â”€ requirements-image.txt   Additional image dependencies
-â””â”€â”€ requirements-text.txt    Additional text dependencies
+|-- src/shap_lcd/            Core SHAP-LCD implementation
+|-- examples/
+|   |-- tabular/             Iris, Wine, Vehicle, Seeds, child occupation
+|   |-- image/               Fashion-MNIST, HAM10000, BloodMNIST
+|   \-- text/                AG News and 20 Newsgroups
+|-- evaluation/tabular/      Robustness evaluation in original feature space
+|-- data/                    Small tabular datasets
+|-- artifacts/               Included artifacts and external-artifact guide
+|-- results/                 Selected final and local results
+|-- requirements.txt         Core and tabular dependencies
+|-- requirements-image.txt   Additional image dependencies
+\-- requirements-text.txt    Additional text dependencies
 ```
 
 Historical root-level scripts remain available through the Git history. The organized examples under `examples/` are the maintained versions.
@@ -116,10 +116,10 @@ For tabular experiments that include model assessment, preprocessing is fitted i
 
 The repository also verifies, where applicable, that SHAP values are expressed on the probability scale by checking the additive reconstruction:
 
-\[
+$$
 \text{base value}+\sum_m s_{m,i}^{(C_k)}
 \approx P_i(C_k)
-\]
+$$
 
 The robustness evaluation for the child-occupation case perturbs variables in their original semantic space:
 
@@ -155,12 +155,12 @@ from shap_lcd.text import TextSHAPLCDExplainer
 
 If you use SHAP-LCD, please cite:
 
-> R. M. Romero Luna et al., â€œShapley Additive Explanation for Local Class Differentiation: Local Explainability for Class Differentiation in Classification Models,â€ *Advanced Intelligent Systems*. https://doi.org/10.1002/aisy.70397
+> R. M. Romero Luna et al., "Shapley Additive Explanation for Local Class Differentiation: Local Explainability for Class Differentiation in Classification Models," *Advanced Intelligent Systems*. https://doi.org/10.1002/aisy.70397
 
 ## Authors
 
-- Roxana M. Romero Luna â€” Universidad del Cauca
-- Hugo A. OrdoÃ±ez
+- Roxana M. Romero Luna - Universidad del Cauca
+- Hugo A. Ordo&ntilde;ez
 - Carlos A. Cobos
 
 ## License
