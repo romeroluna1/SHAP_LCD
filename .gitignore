@@ -1,0 +1,44 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+.venv*/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+
+# Operating system
+.DS_Store
+Thumbs.db
+
+# Large experiment artifacts
+artifacts/*
+!artifacts/README.md
+
+# Temporary files
+*.tmp
+*.log
+
+# Small tabular artifacts included in the repository
+!artifacts/iris/
+!artifacts/iris/**
+!artifacts/seeds/
+!artifacts/seeds/**
+!artifacts/vehicle/
+!artifacts/vehicle/**
+!artifacts/wine/
+!artifacts/wine/**
+
+# Fashion-MNIST artifacts included in the repository
+!artifacts/fashion_mnist/
+!artifacts/fashion_mnist/**
+
+# Quick-test outputs are local execution checks
+results/**/quick_test/
+results/**/quick_test/**

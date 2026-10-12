@@ -1,141 +1,172 @@
-# SHAP_LCD
-_Evaluación de las contribuciones de las características a la diferenciación de clases en modelos de clasificación usando valores SHAP_
+﻿# SHAP-LCD
 
-[![Python](https://img.shields.io/badge/python-≥3.9-blue.svg)](https://www.python.org/)
+**Local explanations for class differentiation in multiclass classification models**
+
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](#license)
-[![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](#)
+[![DOI](https://img.shields.io/badge/DOI-10.1002%2Faisy.70397-blue.svg)](https://doi.org/10.1002/aisy.70397)
 
----
+SHAP-LCD explains why a model favors one class over another for a particular instance. Given two classes, \(C_j\) and \(C_r\), it compares their predicted probabilities and their class-specific SHAP contributions:
 
-## Descripción breve (ES)
+\[
+\Delta P_i^{(C_j,C_r)} = P_i(C_j)-P_i(C_r)
+\]
 
-**SHAP_LCD** implementa un marco matemático y práctico para:
-1. Calcular la **variabilidad de las probabilidades** entre pares de clases de un modelo de clasificación y  
-2. Relacionar esa variabilidad con las **contribuciones SHAP** de las características a nivel de instancia.
+\[
+\Delta S_{m,i}^{(C_j,C_r)}
+= s_{m,i}^{(C_j)}-s_{m,i}^{(C_r)}
+\]
 
-Esto permite conocer **qué atributos impulsan que una instancia cambie de una clase a otra**, proporcionando informes locales interpretables para científicos de datos, sociólogos y responsables de políticas públicas.
+A positive feature-level difference favors \(C_j\), whereas a negative difference favors \(C_r\).
 
-## Short description (EN)
+## Repository contents
 
-**SHAP_LCD** provides a mathematical and practical framework to:
-1. Compute the **probability variability** between pairs of classes in a classifier, and  
-2. Link that variability to **feature‐level SHAP contributions** for each instance.
-
-It helps you discover **which features drive an instance to switch from one class to another**, yielding local, human-readable reports.
-
----
-
-## Estructura del repositorio / Repository layout
-
-```
+```text
 SHAP_LCD/
-├── SHAPE_Explainer.py       # Clase principal que orquesta entrenamiento, cómputo y visualización
-├── Main.py                  # Ejecución desde línea de comandos (ejemplo end-to-end)
-├── Ejemplo_Iris.py          # Notebook / script de ejemplo con el dataset Iris
-├── iris.csv                 # Conjunto de datos de demostración
-├── shap_values_iris.pickle  # Valores SHAP pre-calculados (opcional)
-└── requirements.txt         # Dependencias de Python  (añade si aún no existe)
+â”œâ”€â”€ src/shap_lcd/            Core SHAP-LCD implementation
+â”œâ”€â”€ examples/
+â”‚   â”œâ”€â”€ tabular/             Iris, Wine, Vehicle, Seeds, child occupation
+â”‚   â”œâ”€â”€ image/               Fashion-MNIST, HAM10000, BloodMNIST
+â”‚   â””â”€â”€ text/                AG News and 20 Newsgroups
+â”œâ”€â”€ evaluation/
+â”‚   â””â”€â”€ tabular/             Robustness evaluation in original feature space
+â”œâ”€â”€ data/                    Small tabular datasets
+â”œâ”€â”€ artifacts/               Included artifacts and external-artifact guide
+â”œâ”€â”€ requirements.txt         Core and tabular dependencies
+â”œâ”€â”€ requirements-image.txt   Additional image dependencies
+â””â”€â”€ requirements-text.txt    Additional text dependencies
 ```
 
----
+Historical root-level scripts remain available through the Git history. The organized examples under `examples/` are the maintained versions.
 
-## Instalación / Installation
+## Installation
 
-> **Requisitos**  
-> - Python ≥ 3.9  
-> - `pip` o `conda`  
-> - Compilador C/C++ si usas XGBoost u otras libs que lo necesiten
+Clone the repository and create a virtual environment:
 
 ```bash
-# 1. Clonar el proyecto
 git clone https://github.com/romeroluna1/SHAP_LCD.git
 cd SHAP_LCD
-
-# 2. Crear entorno virtual (opcional pero recomendado)
 python -m venv .venv
-source .venv/bin/activate        # Linux / macOS
-# .venv\Scripts\activate.bat     # Windows
-
-# 3. Instalar dependencias
-pip install -r requirements.txt  # Añade aquí scikit-learn, shap, pandas, etc.
 ```
 
----
+Activate it on Windows:
 
-##  Quick start
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
 
-### 1. Desde un script de ejemplo
+Install the dependencies needed for tabular examples:
 
 ```bash
-python Ejemplo_Iris.py
+python -m pip install -r requirements.txt
 ```
 
-Generará:
-- Diferencias absolutas de probabilidad para cada par de clases  
-- Gráficos de barras y boxplots mostrando `ΔP` y `ΔSHAP`  
-- Un reporte en `./reports/` (JSON + imágenes)
+For image examples:
 
-### 2. Con la clase `SHAPE_Explainer`
+```bash
+python -m pip install -r requirements-image.txt
+```
+
+For text examples:
+
+```bash
+python -m pip install -r requirements-text.txt
+```
+
+## Quick start
+
+Run these commands from the repository root.
+
+### Tabular examples
+
+```bash
+python examples/tabular/run_iris.py
+python examples/tabular/run_wine.py
+python examples/tabular/run_vehicle.py
+python examples/tabular/run_seeds.py
+python examples/tabular/run_child_occupation.py
+```
+
+### Image examples
+
+```bash
+python examples/image/run_fashion_mnist.py
+python examples/image/run_ham10000.py
+python examples/image/run_bloodmnist_lcd.py
+```
+
+### Text examples
+
+```bash
+python examples/text/run_ag_news.py
+python examples/text/run_20_newsgroups.py
+```
+
+## Artifacts
+
+Small artifacts required by the tabular and Fashion-MNIST examples are included. Large trained models, cached SHAP arrays, and research datasets are not stored directly in Git because of GitHub file-size limits.
+
+See [`artifacts/README.md`](artifacts/README.md) for the required filenames and directory locations.
+
+## Reproducibility and evaluation
+
+The maintained examples use fixed random seeds where supported.
+
+For tabular experiments that include model assessment, preprocessing is fitted inside each training fold during cross-validation. The definitive scaler and model are fitted only on the final training partition. This avoids using validation or test information when fitting preprocessing transformations.
+
+The repository also verifies, where applicable, that SHAP values are expressed on the probability scale by checking the additive reconstruction:
+
+\[
+\text{base value}+\sum_m s_{m,i}^{(C_k)}
+\approx P_i(C_k)
+\]
+
+The robustness evaluation for the child-occupation case perturbs variables in their original semantic space:
+
+- numerical variables: bounded Gaussian perturbation;
+- binary variables: valid binary changes;
+- categorical variables: valid category substitutions.
+
+The perturbed observations are subsequently processed by the same fitted training pipeline.
+
+## Research examples
+
+The repository contains:
+
+1. Reproducibility examples associated with the SHAP-LCD methodological work.
+2. Extended tabular, image, and text examples developed for subsequent research and monograph documentation.
+
+Quick-test results are intended only to verify execution and must not be reported as final experimental results.
+
+## Public API
 
 ```python
-from SHAPE_Explainer import SHAPEExplainer
-from sklearn.ensemble import RandomForestClassifier
-
-explainer = SHAPEExplainer(
-    csv_path="iris.csv",
-    model_class=RandomForestClassifier,
-    target_column="species",
-    n_splits=10,           # Validación cruzada estratificada
-    test_size=0.3,
-    random_state=42
-)
-
-explainer.fit()                                                # Entrena y guarda shap_values_
-explainer.explain_instance(instance_id=0, top_k=10)            # Visualiza contribuciones
-explainer.save_reports(output_dir="reports/iris_instance0")    # Exporta resultados
+from shap_lcd import SHAPExplainer
 ```
 
----
+Image and text utilities are available from their corresponding modules:
 
-## Ejemplo de salida
+```python
+from shap_lcd.image import SHAPExplainer2
+from shap_lcd.text import TextSHAPLCDExplainer
+```
 
-![Sample ΔP vs ΔSHAP](docs/example_delta_plot.png) <!-- TODO: añade captura si lo deseas -->
+## Citation
 
----
+If you use SHAP-LCD, please cite:
 
-##  Contribuciones / Contributing
+> R. M. Romero Luna et al., â€œShapley Additive Explanation for Local Class Differentiation: Local Explainability for Class Differentiation in Classification Models,â€ *Advanced Intelligent Systems*. https://doi.org/10.1002/aisy.70397
 
-1. Haz un fork y crea tu rama (`git checkout -b feature/mi-mejora`).  
-2. Asegúrate de que `pre-commit` (black, flake8, isort) pasa sin errores.  
-3. Envía un _pull request_ describiendo claramente la mejora o corrección.
+## Authors
 
----
+- Roxana M. Romero Luna â€” Universidad del Cauca
+- Hugo A. OrdoÃ±ez
+- Carlos A. Cobos
 
-##  Licencia / License
-Distribuido bajo la licencia **MIT**. Consulta el archivo [`LICENSE`](LICENSE) para más información.  
-<!-- TODO: cámbiala si decides otra licencia -->
+## License
 
----
+This project is distributed under the MIT License. See [`LICENSE`](LICENSE).
 
-##  Autores / Authors
+## Contact
 
-| Nombre | Afiliación | Correo |
-|--------|------------|--------|
-| Roxana R. | Universidad del Cauca. Grupo de Investigación Tecnología de la Infomación GTI.  | romeroluna@unicauca.edu.co |
-| Colaboradores | Ninguno |
-
-¿Usas **SHAP_LCD** en tu investigación? ¡Cítanos y abre un _issue_ para contarnos!  
-
----
-
-## Referencias clave / Key references
-
-- Lundberg, S. M., & Lee, S.-I. (2017). “A Unified Approach to Interpreting Model Predictions.”  
-- [SHAP documentation](https://shap.readthedocs.io/en/latest/) (2025-01-08).  
-- **[Añade aquí tu artículo o pre-print asociado]**
-
----
-
-## Contacto / Contact
-
-Para dudas o sugerencias abre un **Issue** o escribe a **[romeroluna@unicauca.edu.co]**.  
+Questions and suggestions may be submitted through GitHub Issues or sent to romeroluna@unicauca.edu.co.

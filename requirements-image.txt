@@ -1,0 +1,6 @@
+﻿-r requirements.txt
+
+tensorflow>=2.18,<2.21
+keras>=3.8,<4
+medmnist>=3.0,<4
+kagglehub>=0.3,<1

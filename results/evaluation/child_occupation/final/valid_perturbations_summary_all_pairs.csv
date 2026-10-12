@@ -1,0 +1,9 @@
+﻿pair,metric,mean,std,mean±std
+asoTrabajo_vs_estudia,Stability_S,0.5333965566642423,0.3961989834733288,0.533397 ± 0.396199
+asoTrabajo_vs_estudia,Consistency_C_imp,0.9753333333333335,0.06795022855068777,0.975333 ± 0.067950
+asoTrabajo_vs_estudia,Coverage_imp,0.5299999999999999,0.2889695509228337,0.530000 ± 0.288970
+asoTrabajo_vs_estudia,PredKeep_imp,0.7513333333333334,0.3099418422514638,0.751333 ± 0.309942
+asoTrabajo_vs_otraactividad,Stability_S,0.6489785991992127,0.3850239582408999,0.648979 ± 0.385024
+asoTrabajo_vs_otraactividad,Consistency_C_imp,0.93,0.15077276379988153,0.930000 ± 0.150773
+asoTrabajo_vs_otraactividad,Coverage_imp,0.4506666666666666,0.2889687662115146,0.450667 ± 0.288969
+asoTrabajo_vs_otraactividad,PredKeep_imp,0.648,0.32785705640279666,0.648000 ± 0.327857

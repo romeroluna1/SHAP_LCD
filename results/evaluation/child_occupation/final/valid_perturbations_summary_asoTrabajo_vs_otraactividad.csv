@@ -1,0 +1,5 @@
+﻿pair,metric,mean,std,mean±std
+asoTrabajo_vs_otraactividad,Stability_S,0.6489785991992127,0.3850239582408999,0.648979 ± 0.385024
+asoTrabajo_vs_otraactividad,Consistency_C_imp,0.93,0.15077276379988153,0.930000 ± 0.150773
+asoTrabajo_vs_otraactividad,Coverage_imp,0.4506666666666666,0.2889687662115146,0.450667 ± 0.288969
+asoTrabajo_vs_otraactividad,PredKeep_imp,0.648,0.32785705640279666,0.648000 ± 0.327857

@@ -1,0 +1,2 @@
+test_position,true_class_index,true_class,predicted_class_index,predicted_class,probability_asoTrabajo,probability_estudia,probability_incapacitado,probability_otraactividad
+31,1,estudia,1,estudia,0.00897305341055341,0.9657527955300325,0.006175213412146687,0.019098937647267514
