@@ -40,7 +40,7 @@ FEATURE_NAMES_CSV = ARTIFACT_DIR / "feature_names.csv"
 METADATA_FILE = ARTIFACT_DIR / "metadata.json"
 
 SEED = 42
-INSTANCE_INDEX = 31
+INSTANCE_INDEX = 100
 TOP_FEATURES = 10
 SHOW_PLOTS = True
 
@@ -89,6 +89,22 @@ def finish_figure(fig: plt.Figure, path: Path) -> None:
     plt.close(fig)
 
 
+def fix_mojibake(text: str) -> str:
+    """Corrige caracteres dañados por una interpretación incorrecta de UTF-8."""
+    if not isinstance(text, str):
+        return text
+
+    text = text.replace("\ufeff", "").replace("ï»¿", "")
+
+    for _ in range(2):
+        try:
+            corrected = text.encode("latin1").decode("utf-8")
+            text = corrected
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            break
+
+    return text
+
 def load_feature_names(n_features: int) -> list[str]:
     names: list[str] = []
 
@@ -118,6 +134,7 @@ def load_feature_names(n_features: int) -> list[str]:
             "Feature-name count does not match X_test: "
             f"names={len(names)}, features={n_features}."
         )
+    names = [fix_mojibake(name) for name in names]
     return names
 
 
