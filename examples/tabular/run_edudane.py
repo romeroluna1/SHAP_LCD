@@ -3,7 +3,6 @@
 Carga artefactos definitivos sin reentrenar ni recalcular SHAP.
 La evaluacion de estabilidad y consistencia queda en un programa separado.
 """
-
 from __future__ import annotations
 
 import json
@@ -24,6 +23,13 @@ import seaborn as sns
 import shap
 import sklearn
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    matthews_corrcoef,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -350,7 +356,7 @@ def main() -> None:
     print(f"Artifacts       : {ARTIFACT_DIR}")
     print(f"Results         : {RESULTS_DIR}")
     print(f"Test position   : {INSTANCE_INDEX}")
-    print(f"Pair selection  : {PAIRS_TO_EXPLAIN or str(TOP_PAIRS_BY_ABS_DELTA_P) + ' top by |Delta P|'}")
+    print("Pair selection  : interactive by |Delta P|" if PAIRS_TO_EXPLAIN is None else f"Pair selection  : {PAIRS_TO_EXPLAIN}")
     print("Training        : omitted; definitive validated artifacts are loaded")
     print("Robustness      : omitted; evaluated separately in original space")
     print("=" * 76)
@@ -379,6 +385,43 @@ def main() -> None:
     if not np.isfinite(X_test).all() or not np.isfinite(shap_values).all():
         raise ValueError("X_test o los valores SHAP contienen valores no finitos.")
     verify_shap_probability_scale(model, X_test, shap_values)
+
+    # ============================================================
+    # EVALUACION DEL MODELO DEFINITIVO EN TEST (SIN CV NI REFIT)
+    # ============================================================
+    print("\n" + "=" * 76)
+    print(" MODEL EVALUATION - DEFINITIVE TEST SET")
+    print("=" * 76)
+
+    y_pred = model.predict(X_test)
+    metrics = {
+        "Accuracy": accuracy_score(y_test, y_pred),
+        "Macro-Precision": precision_score(
+            y_test, y_pred, average="macro", zero_division=0
+        ),
+        "Macro-Recall": recall_score(
+            y_test, y_pred, average="macro", zero_division=0
+        ),
+        "Macro-F1": f1_score(
+            y_test, y_pred, average="macro", zero_division=0
+        ),
+        "MCC": matthews_corrcoef(y_test, y_pred),
+    }
+
+    print(f"Test instances : {len(y_test)}")
+    for metric, value in metrics.items():
+        print(f"{metric:<18}: {value:.6f}")
+
+    metrics_df = pd.DataFrame([{
+        "dataset": "EduFormalDANE",
+        "evaluation": "Final held-out test set",
+        "n_test": len(y_test),
+        **metrics,
+    }])
+    metrics_path = RESULTS_DIR / "model_test_metrics.csv"
+    metrics_df.to_csv(metrics_path, index=False)
+    print(f"Metrics saved in: {metrics_path}")
+    print("=" * 76)
 
     x_instance = X_test[INSTANCE_INDEX : INSTANCE_INDEX + 1]
     probabilities_raw = model.predict_proba(x_instance)[0]
@@ -416,54 +459,49 @@ def main() -> None:
     pairs = PAIRS_TO_EXPLAIN
 
     if pairs is None:
-     print("\nPARES DE CLASES ORDENADOS POR |Delta P|:")
+        print("\nPARES DE CLASES ORDENADOS POR |Delta P|:")
+        available_pairs = []
 
-    available_pairs = []
-
-    for number, row in enumerate(ranking.itertuples(), start=1):
-        class_j = int(row.class_j_index)
-        class_r = int(row.class_r_index)
-
-        available_pairs.append((class_j, class_r))
-
-        print(
-            f"{number}. {CLASS_NAMES[class_j]} vs {CLASS_NAMES[class_r]} "
-            f"|Delta P| = {row.abs_delta_probability:.6f}"
-        )
-
-    while True:
-        selection = input(
-            "\nIntroduce los numeros de los pares que deseas explicar "
-            "(ejemplo: 1,3): "
-        ).strip()
-
-        try:
-            selected_numbers = [
-                int(value.strip())
-                for value in selection.split(",")
-            ]
-
-            if (
-                not selected_numbers
-                or len(set(selected_numbers)) != len(selected_numbers)
-                or any(
-                    number < 1 or number > len(available_pairs)
-                    for number in selected_numbers
-                )
-            ):
-                raise ValueError
-
-            pairs = [
-                available_pairs[number - 1]
-                for number in selected_numbers
-            ]
-            break
-
-        except ValueError:
+        for number, row in enumerate(ranking.itertuples(), start=1):
+            class_j = int(row.class_j_index)
+            class_r = int(row.class_r_index)
+            available_pairs.append((class_j, class_r))
             print(
-                "Seleccion no valida. Introduce numeros distintos "
-                "de la lista, separados por comas."
+                f"{number}. {CLASS_NAMES[class_j]} vs {CLASS_NAMES[class_r]} "
+                f"|Delta P| = {row.abs_delta_probability:.6f}"
             )
+
+        while True:
+            selection = input(
+                "\nIntroduce los numeros de los pares que deseas explicar "
+                "(ejemplo: 1,3): "
+            ).strip()
+
+            try:
+                selected_numbers = [
+                    int(value.strip())
+                    for value in selection.split(",")
+                ]
+                if (
+                    not selected_numbers
+                    or len(set(selected_numbers)) != len(selected_numbers)
+                    or any(
+                        number < 1 or number > len(available_pairs)
+                        for number in selected_numbers
+                    )
+                ):
+                    raise ValueError
+
+                pairs = [
+                    available_pairs[number - 1]
+                    for number in selected_numbers
+                ]
+                break
+            except ValueError:
+                print(
+                    "Seleccion no valida. Introduce numeros distintos "
+                    "de la lista, separados por comas."
+                )
     for class_j, class_r in pairs:
         if class_j not in CLASS_NAMES or class_r not in CLASS_NAMES or class_j == class_r:
             raise ValueError(f"Par de clases no valido: {(class_j, class_r)}")
@@ -482,3 +520,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

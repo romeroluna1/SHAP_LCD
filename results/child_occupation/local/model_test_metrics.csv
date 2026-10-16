@@ -1,0 +1,2 @@
+dataset,evaluation,n_test,Accuracy,Macro-Precision,Macro-Recall,Macro-F1,MCC
+Child occupation,Final held-out test set,11971,0.9205580152034082,0.6580380938308651,0.7082051473438626,0.6814654796654523,0.5751585054056223

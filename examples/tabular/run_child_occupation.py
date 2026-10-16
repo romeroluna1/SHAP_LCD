@@ -25,6 +25,13 @@ import seaborn as sns
 import shap
 import sklearn
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    matthews_corrcoef,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -363,6 +370,39 @@ def main() -> None:
     print(f"SHAP shape      : {shap_values.shape}")
     print(f"Feature count   : {len(feature_names)}")
     verify_shap_probability_scale(model, X_test, shap_values)
+
+    # Model evaluation on the definitive held-out test set (no retraining or CV).
+    print("\n" + "=" * 76)
+    print(" MODEL EVALUATION - DEFINITIVE TEST SET")
+    print("=" * 76)
+    y_pred = model.predict(X_test)
+    metrics = {
+        "Accuracy": accuracy_score(y_test, y_pred),
+        "Macro-Precision": precision_score(
+            y_test, y_pred, average="macro", zero_division=0
+        ),
+        "Macro-Recall": recall_score(
+            y_test, y_pred, average="macro", zero_division=0
+        ),
+        "Macro-F1": f1_score(
+            y_test, y_pred, average="macro", zero_division=0
+        ),
+        "MCC": matthews_corrcoef(y_test, y_pred),
+    }
+    print(f"Test instances : {len(y_test)}")
+    for metric, value in metrics.items():
+        print(f"{metric:<18}: {value:.6f}")
+
+    metrics_df = pd.DataFrame([{
+        "dataset": "Child occupation",
+        "evaluation": "Final held-out test set",
+        "n_test": len(y_test),
+        **metrics,
+    }])
+    metrics_path = RESULTS_DIR / "model_test_metrics.csv"
+    metrics_df.to_csv(metrics_path, index=False)
+    print(f"\nMetrics saved in: {metrics_path}")
+    print("=" * 76)
 
     x_instance = X_test[INSTANCE_INDEX : INSTANCE_INDEX + 1]
     probabilities_raw = model.predict_proba(x_instance)[0]
