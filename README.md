@@ -25,7 +25,7 @@ A positive feature-level difference favors $C_j$, whereas a negative difference 
 SHAP_LCD/
 |-- src/shap_lcd/            Core SHAP-LCD implementation
 |-- examples/
-|   |-- tabular/             Iris, Wine, Vehicle, Seeds, child occupation
+|   |-- tabular/             Iris, Wine, Vehicle, Seeds, child occupation, EduFormalDANE
 |   |-- image/               Fashion-MNIST, HAM10000, BloodMNIST
 |   \-- text/                AG News and 20 Newsgroups
 |-- evaluation/tabular/      Robustness evaluation in original feature space
@@ -85,6 +85,7 @@ python examples/tabular/run_wine.py
 python examples/tabular/run_vehicle.py
 python examples/tabular/run_seeds.py
 python examples/tabular/run_child_occupation.py
+python examples/tabular/run_edudane.py
 ```
 
 ### Image examples
@@ -170,3 +171,4 @@ This project is distributed under the MIT License. See [`LICENSE`](LICENSE).
 ## Contact
 
 Questions and suggestions may be submitted through GitHub Issues or sent to romeroluna@unicauca.edu.co.
+
