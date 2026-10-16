@@ -1,0 +1,2 @@
+test_position,true_class_index,true_class,predicted_class_index,predicted_class,probability_Diario,probability_Semanal,probability_Mensual,probability_Ocasional,probability_Nunca
+32,1,Semanal,1,Semanal,0.0,1.0,0.0,0.0,0.0

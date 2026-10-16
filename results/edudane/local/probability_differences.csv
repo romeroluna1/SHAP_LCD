@@ -1,0 +1,11 @@
+class_j_index,class_j,class_r_index,class_r,probability_j,probability_r,delta_probability,abs_delta_probability
+0,Diario,1,Semanal,0.0,1.0,-1.0,1.0
+1,Semanal,3,Ocasional,1.0,0.0,1.0,1.0
+1,Semanal,4,Nunca,1.0,0.0,1.0,1.0
+1,Semanal,2,Mensual,1.0,0.0,1.0,1.0
+0,Diario,2,Mensual,0.0,0.0,0.0,0.0
+0,Diario,4,Nunca,0.0,0.0,0.0,0.0
+0,Diario,3,Ocasional,0.0,0.0,0.0,0.0
+2,Mensual,3,Ocasional,0.0,0.0,0.0,0.0
+2,Mensual,4,Nunca,0.0,0.0,0.0,0.0
+3,Ocasional,4,Nunca,0.0,0.0,0.0,0.0
